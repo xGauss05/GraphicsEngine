@@ -36,6 +36,15 @@ struct Program
     u64                lastWriteTimestamp; // What is this for?
 };
 
+struct OpenGL_Info 
+{
+    char* version;
+    char* renderer;
+    char* vendor;
+    char* shading_language_version;
+    
+};
+
 enum Mode
 {
     Mode_TexturedQuad,
@@ -52,8 +61,7 @@ struct App
     Input input;
 
     // Graphics
-    char gpuName[64];
-    char openGlVersion[64];
+    OpenGL_Info openglInfo;
 
     ivec2 displaySize;
 
