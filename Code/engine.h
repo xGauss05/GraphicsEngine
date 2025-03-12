@@ -42,6 +42,7 @@ struct OpenGL_Info
     char* renderer;
     char* vendor;
     char* shading_language_version;
+    std::vector<std::string> extensions;
     
 };
 

@@ -184,6 +184,21 @@ void GetOpenGLContext(App* app)
 	app->openglInfo.renderer = (char*)glGetString(GL_RENDERER);
 	app->openglInfo.vendor = (char*)glGetString(GL_VENDOR);
 	app->openglInfo.shading_language_version = (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+
+	GLint n_extensions;
+	glGetIntegerv(GL_NUM_EXTENSIONS, &n_extensions);
+	
+	GLint numExtensions = 0;
+	glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
+
+	for (GLint i = 0; i < numExtensions; ++i) 
+	{
+		const GLubyte* extension = glGetStringi(GL_EXTENSIONS, GLuint(i));
+		if (extension) 
+		{
+			app->openglInfo.extensions.push_back(reinterpret_cast<const char*>(extension));
+		}
+	}
 }
 
 void InitLoadTextures(App* app)
@@ -195,12 +210,35 @@ void InitLoadTextures(App* app)
 	app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
 }
 
+void TextureQuadMode(App* app)
+{
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+	Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
+	glUseProgram(programTexturedGeometry.handle); //bind shader
+	glBindVertexArray(app->vao);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glUniform1i(app->programUniformTexture, 0);
+	glActiveTexture(GL_TEXTURE0);
+	GLuint textureHandle = app->textures[app->diceTexIdx].handle;
+	glBindTexture(GL_TEXTURE_2D, textureHandle);
+
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+
+	glBindVertexArray(0);
+	glUseProgram(0);
+}
+
 void Init(App* app)
 {
 	GetOpenGLContext(app);
 
-
-	// TODO: Initialize your resources here!
 	struct VertexV3V2
 	{
 		glm::vec3 pos;
@@ -215,30 +253,66 @@ void Init(App* app)
 	};
 
 	const u16 indices[] = { 0,1,2,0,2,3 };
-		// - vertex buffers
-		// - element/index buffers
-		// - vaos
+
+	// Geometry
+	// - vertex buffers
 	glGenBuffers(1, &app->embeddedVertices);
 	glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	g1GenBuffers(1, &app->embeddedElements);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embedded Elements);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW); glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	// - element/index buffers
+	glGenBuffers(1, &app->embeddedElements);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedElements);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	// Attribute (VAO initialization)
+	// - vaos
+	glGenVertexArrays(1, &app->vao);
+	glBindVertexArray(app->vao);
+	glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)0);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)12);
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedElements);
+	glBindVertexArray(0);
 
 	// - programs (and retrieve uniform indices)
-	// 
+	app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
+	Program& texturedGeometryProgram = app->programs[app->texturedGeometryProgramIdx];
+
+	app->programUniformTexture = glGetUniformLocation(texturedGeometryProgram.handle, "uTexture");
+
 	// - textures
 	InitLoadTextures(app);
 
 	app->mode = Mode_TexturedQuad;
 }
 
-void Gui(App* app)
+void InfoWindow(App* app) 
 {
 	ImGui::Begin("Info");
 	ImGui::Text("FPS: %f", 1.0f / app->deltaTime);
+	ImGui::Text("Version: %s", app->openglInfo.version);
+	ImGui::Text("Renderer: %s", app->openglInfo.renderer);
+	ImGui::Text("Vendor: %s", app->openglInfo.vendor);
+	ImGui::Text("Shading Language Version: %s", app->openglInfo.shading_language_version);
+
+	if (ImGui::CollapsingHeader("Extensions", ImGuiTreeNodeFlags_None))
+	{
+		for (const auto& extension : app->openglInfo.extensions)
+		{
+			ImGui::Text("%s", extension.c_str());
+		}
+	}
 	ImGui::End();
+}
+
+void Gui(App* app)
+{
+	InfoWindow(app);
 }
 
 void Update(App* app)
@@ -261,6 +335,8 @@ void Render(App* app)
 		//   (...and make its texture sample from unit 0)
 		// - bind the vao
 		// - glDrawElements() !!!
+
+		TextureQuadMode(app);
 	}
 	break;
 
