@@ -61,7 +61,8 @@ struct VertexV3V2
 	glm::vec2 uv;
 };
 
-const VertexV3V2 vertices[] = {
+const VertexV3V2 vertices[] = 
+{
 	{ glm::vec3(-0.5, -0.5, 0.0),  glm::vec2(0.0, 0.0) },
 	{ glm::vec3(0.5, -0.5, 0.0),   glm::vec2(1.0, 0.0) },
 	{ glm::vec3(0.5,  0.5, 0.0),   glm::vec2(1.0, 1.0) },
@@ -79,8 +80,8 @@ struct VertexBufferAttribute
 
 struct VertexBufferLayout
 {
-	std::vector<VertexBufferAttribute> attributes;
-	u8 stride;
+	std::vector<VertexBufferAttribute> vbAttributes;
+	u8 stride; // size of the mesh attributes. OpenGL needs this to read the buffer
 };
 
 struct VertexShaderAttribute
@@ -91,7 +92,7 @@ struct VertexShaderAttribute
 
 struct VertexShaderLayout
 {
-	std::vector<VertexShaderAttribute> attributes;
+	std::vector<VertexShaderAttribute> vsAttributes;
 };
 
 struct Vao
@@ -102,12 +103,18 @@ struct Vao
 
 struct Submesh
 {
-	VertexBufferLayout vertexBufferLayout;
+	// where we store attributes
+	VertexBufferLayout vbLayout; 
+
+	// will be merged in the VBO (Vertex Buffer Object) and IBO (Index Buffer Object) in the Mesh
 	std::vector<float> vertices;
 	std::vector<u32> indices;
-	u32 vertexOffset;
+
+	// to find the data for the submesh on the VBO and IBO buffers
+	u32 vertexOffset; 
 	u32 indexOffset;
 
+	// Vertex Attribute Object
 	std::vector<Vao> vaos;
 };
 

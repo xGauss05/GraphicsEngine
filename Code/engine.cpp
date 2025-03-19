@@ -241,26 +241,26 @@ void ProcessAssimpMesh(const aiScene* scene, aiMesh* mesh, Mesh* myMesh, u32 bas
 
 	// create the vertex format
 	VertexBufferLayout vertexBufferLayout = {};
-	vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 }); // 3D positions
-	vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 1, 3, 3 * sizeof(float) }); // tex coords
+	vertexBufferLayout.vbAttributes.push_back(VertexBufferAttribute{ 0, 3, 0 }); // 3D positions
+	vertexBufferLayout.vbAttributes.push_back(VertexBufferAttribute{ 1, 3, 3 * sizeof(float) }); // tex coords
 	vertexBufferLayout.stride = 6 * sizeof(float);
 	if (hasTexCoords)
 	{
-		vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 2, 2, vertexBufferLayout.stride });
+		vertexBufferLayout.vbAttributes.push_back(VertexBufferAttribute{ 2, 2, vertexBufferLayout.stride });
 		vertexBufferLayout.stride += 2 * sizeof(float);
 	}
 	if (hasTangentSpace)
 	{
-		vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 3, 3, vertexBufferLayout.stride });
+		vertexBufferLayout.vbAttributes.push_back(VertexBufferAttribute{ 3, 3, vertexBufferLayout.stride });
 		vertexBufferLayout.stride += 3 * sizeof(float);
 
-		vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 4, 3, vertexBufferLayout.stride });
+		vertexBufferLayout.vbAttributes.push_back(VertexBufferAttribute{ 4, 3, vertexBufferLayout.stride });
 		vertexBufferLayout.stride += 3 * sizeof(float);
 	}
 
 	// add the submesh into the mesh
 	Submesh submesh = {};
-	submesh.vertexBufferLayout = vertexBufferLayout;
+	submesh.vbLayout = vertexBufferLayout;
 	submesh.vertices.swap(vertices);
 	submesh.indices.swap(indices);
 	myMesh->submeshes.push_back(submesh);
@@ -423,6 +423,37 @@ u32 LoadModel(App* app, const char* filename)
 	return modelIdx;
 }
 
+GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
+{
+	Submesh& subMesh = mesh.submeshes[submeshIndex];
+
+	// Try finding a vao for this submesh/program
+	for (u32 i = 0; i < (u32)subMesh.vaos.size(); i++)
+	{
+		if (subMesh.vaos[i].programHandle == program.handle) 
+			return subMesh.vaos[i].handle;
+	}
+
+	GLuint vaoHandle = 0;
+
+	// Create a new vao for this submesh/program
+	glGenVertexArrays(1, &vaoHandle);
+	glBindVertexArray(vaoHandle);
+	glBindBuffer(GL_ARRAY_BUFFER, subMesh.vertexOffset);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(subMesh.vertices), (void*)0);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(subMesh.vertices), (void*)subMesh.vertexOffset);
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, subMesh.indexOffset);
+	glBindVertexArray(0);
+
+	// Store it in the list for this submesh
+	Vao vao = { vaoHandle, program.handle };
+	subMesh.vaos.push_back(vao);
+
+	return vaoHandle;
+}
+
 void GetOpenGLContext(App* app)
 {
 	app->openglInfo.version = (char*)glGetString(GL_VERSION);
@@ -555,36 +586,6 @@ void InitQuadMode(App* app)
 	// - textures
 	InitLoadTextures(app);
 
-	Mesh myMesh = {};
-
-	// Create the vertex format
-	VertexBufferLayout vertexBufferLayout = {};
-	vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0,3,0 }); // 3D positions
-	vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 2,2,3 * sizeof(float) }); // tex coordinates
-	vertexBufferLayout.stride = 5 * sizeof(float);
-
-	// Add the submesh into the mesh
-	Submesh submesh = {};
-	submesh.vertexBufferLayout = vertexBufferLayout;
-
-	//submesh.vertices.swap(vertices);
-	for (const auto& vertex : vertices) 
-	{
-		submesh.vertices.push_back(vertex.pos.x);
-		submesh.vertices.push_back(vertex.pos.y);
-		submesh.vertices.push_back(vertex.pos.z);
-		submesh.vertices.push_back(vertex.uv.x);
-		submesh.vertices.push_back(vertex.uv.y);
-	}
-
-	//submesh.indices.swap(indices);
-	for (const auto& index : indices) 
-	{
-		submesh.indices.push_back(index);
-	}
-
-	//myMesh->submeshes.push_back(submesh);
-
 	app->mode = Mode_TexturedQuad;
 }
 
@@ -598,8 +599,6 @@ void Init(App* app)
 	GetOpenGLContext(app);
 
 	InitQuadMode(app);
-
-	//InitMeshMode(app);
 
 }
 
