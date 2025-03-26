@@ -136,13 +136,21 @@ struct Model
 	std::vector<u32> materialIdx;
 };
 
+struct Camera 
+{
+	vec3 position;
+	float fov;
+	float znear;
+	float zfar;
+};
+
 struct Program
 {
 	GLuint             handle;
 	std::string        filepath;
 	std::string        programName;
 	u64                lastWriteTimestamp; // What is this for?
-	VertexBufferLayout vertexInputLayout;
+	VertexShaderLayout vertexInputLayout;
 };
 
 struct Light

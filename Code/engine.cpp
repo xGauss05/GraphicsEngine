@@ -120,7 +120,7 @@ u32 LoadProgram(App* app, const char* filepath, const char* programName)
 		u8 attributeLocation = glGetAttribLocation(program.handle, attributeName.c_str());
 		u8 componentCount = (u8)(attributeType == GL_FLOAT_VEC3 ? 3 : (attributeType == GL_FLOAT_VEC2 ? 2 : 1));
 
-		program.vertexInputLayout.vbAttributes.push_back({ attributeLocation, componentCount });
+		program.vertexInputLayout.vsAttributes.push_back({ attributeLocation, componentCount });
 	}
 
 	app->programs.push_back(program);
@@ -531,13 +531,13 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
 
 		// We have to link all vertex inputs attributes to attributes in the vertex buffer
-		for (u32 i = 0; i < program.vertexInputLayout.vbAttributes.size(); i++)
+		for (u32 i = 0; i < program.vertexInputLayout.vsAttributes.size(); i++)
 		{
 			bool attributeWasLinked = false;
 
 			for (u32 j = 0; j < submesh.vbLayout.vbAttributes.size(); j++)
 			{
-				if (program.vertexInputLayout.vbAttributes[i].location == submesh.vbLayout.vbAttributes[j].location)
+				if (program.vertexInputLayout.vsAttributes[i].location == submesh.vbLayout.vbAttributes[j].location)
 				{
 					const u32 index = submesh.vbLayout.vbAttributes[j].location;
 					const u32 ncomp = submesh.vbLayout.vbAttributes[j].componentCount;
@@ -628,8 +628,6 @@ void InitMeshMode(App* app)
 	app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_TEXTURED_MESH");
 	Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
 
-	
-
 	app->texturedMeshProgram_uTexture = glGetUniformLocation(texturedMeshProgram.handle, "uTexture");
 }
 
@@ -704,11 +702,6 @@ void Update(App* app)
 // Render functions
 void RenderQuadMode(App* app)
 {
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glViewport(0, 0, app->displaySize.x, app->displaySize.y);
-
 	Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
 	glUseProgram(programTexturedGeometry.handle); //bind shader
 	glBindVertexArray(app->vao);
@@ -729,11 +722,6 @@ void RenderQuadMode(App* app)
 
 void RenderMeshMode(App* app)
 {
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glViewport(0, 0, app->displaySize.x, app->displaySize.y);
-
 	Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
 	glUseProgram(texturedMeshProgram.handle);
 
@@ -763,6 +751,25 @@ void RenderMeshMode(App* app)
 
 void Render(App* app)
 {
+	Camera camera = {};
+	camera.znear = 0.1f;
+	camera.zfar = 1000.0f;
+
+	float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
+
+	glm::mat4 projection = glm::perspective(glm::radians(60.0f), aspectRatio, camera.znear, camera.zfar);
+	// eye, center, up
+	vec3 upVector = vec3{ 0, 1, 0 };
+	//glm::mat4 view = glm::lookAt(camera.position, camera.target, upVector);
+
+	// perspective division
+	// x/w y/w z/w to obtain NDC (normalized device coordinates)
+
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
 	switch (app->mode)
 	{
 	case Mode_TexturedQuad:
@@ -772,6 +779,7 @@ void Render(App* app)
 	case Mode_Mesh:
 		RenderMeshMode(app);
 		break;
+
 	default:
 		break;
 	}
