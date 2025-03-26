@@ -104,35 +104,24 @@ u32 LoadProgram(App* app, const char* filepath, const char* programName)
 	int attributeCount = 0;
 	glGetProgramiv(program.handle, GL_ACTIVE_ATTRIBUTES, &attributeCount);
 
+	GLint maxAttributeNameLength = 0;
+	glGetProgramiv(program.handle, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &maxAttributeNameLength);
+
 	for (u32 i = 0; i < attributeCount; i++)
 	{
-		char attributeName[64];
+		std::string attributeName(maxAttributeNameLength, '\0');
 		GLsizei attributeNameLength;
 		GLint attributeSize;
 		GLenum attributeType;
-		GLint attributeLocation;
 
-		glGetActiveAttrib(program.handle, i, ARRAY_COUNT(attributeName), &attributeNameLength, &attributeSize, &attributeType, attributeName);
-		attributeLocation = glGetAttribLocation(program.handle, attributeName);
+		glGetActiveAttrib(program.handle, i, maxAttributeNameLength, &attributeNameLength, &attributeSize, &attributeType, &attributeName[0]);
+		attributeName.resize(attributeNameLength);
 
-		if (attributeLocation >= 0)
-		{
-			VertexBufferAttribute attr = {};
-			attr.location = (u8)attributeLocation;
-			attr.componentCount = (u8)(attributeType == GL_FLOAT_VEC3 ? 3 : (attributeType == GL_FLOAT_VEC2 ? 2 : 1));
-			attr.offset = 0; // El offset se calculará al procesar la malla
+		u8 attributeLocation = glGetAttribLocation(program.handle, attributeName.c_str());
+		u8 componentCount = (u8)(attributeType == GL_FLOAT_VEC3 ? 3 : (attributeType == GL_FLOAT_VEC2 ? 2 : 1));
 
-			program.vertexInputLayout.vbAttributes.push_back(attr);
-		}
+		program.vertexInputLayout.vbAttributes.push_back({ attributeLocation, componentCount });
 	}
-
-	u8 stride = 0;
-	for (auto& attr : program.vertexInputLayout.vbAttributes)
-	{
-		attr.offset = stride;
-		stride += attr.componentCount * sizeof(float);
-	}
-	program.vertexInputLayout.stride = stride;
 
 	app->programs.push_back(program);
 
@@ -578,12 +567,22 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
 // Init functions
 void InitLoadTextures(App* app)
 {
+
 	app->diceTexIdx = LoadTexture2D(app, "dice.png");
+	GLenum err = glGetError();
+	if (err != GL_NO_ERROR)
+	{
+		// after loading texture, err is 500: 
+		// GL_INVALID_ENUM error, which indicates that an unacceptable value was specified for an 
+		// enumerated argument in an OpenGL function call
+		// ignore?
+		ELOG("OpenGL Error: %x", err);
+	}
 	app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
 	app->blackTexIdx = LoadTexture2D(app, "color_black.png");
 	app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
 	app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
-	app->patrickTexIdx = LoadTexture2D(app, "Patrick/Skin_Patrick.png");
+
 }
 
 void InitQuadMode(App* app)
@@ -626,8 +625,10 @@ void InitMeshMode(App* app)
 	app->patrickModel = LoadModel(app, "Patrick/Patrick.obj");
 
 	// - programs
-	app->texturedMeshProgramIdx = LoadProgram(app, "albedo.glsl", "SHOW_TEXTURED_MESH");
+	app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_TEXTURED_MESH");
 	Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
+
+	
 
 	app->texturedMeshProgram_uTexture = glGetUniformLocation(texturedMeshProgram.handle, "uTexture");
 }
@@ -642,6 +643,7 @@ void Init(App* app)
 	GetOpenGLContext(app);
 
 	InitLoadTextures(app);
+
 	InitQuadMode(app);
 
 	InitMeshMode(app);
@@ -748,12 +750,15 @@ void RenderMeshMode(App* app)
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
-
 		glUniform1i(app->texturedMeshProgram_uTexture, 0);
 
 		Submesh& submesh = mesh.submeshes[i];
 		glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+
 	}
+
+	glBindVertexArray(0);
+	glUseProgram(0);
 }
 
 void Render(App* app)
@@ -770,8 +775,4 @@ void Render(App* app)
 	default:
 		break;
 	}
-
-	GLenum err = glGetError();
-	if (err != GL_NO_ERROR)
-		ELOG("OpenGL Error: %x", err);
 }

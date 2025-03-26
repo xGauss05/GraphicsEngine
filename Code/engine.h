@@ -145,6 +145,14 @@ struct Program
 	VertexBufferLayout vertexInputLayout;
 };
 
+struct Light
+{
+	unsigned int type; // 0 // use lightype xd
+	vec3 color;		   // 16
+	vec3 direction;	   // 32
+	vec3 position;	   // 48
+};
+
 struct App
 {
 	// Loop
