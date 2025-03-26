@@ -31,14 +31,6 @@ struct Texture
 	std::string filepath;
 };
 
-struct Program
-{
-	GLuint             handle;
-	std::string        filepath;
-	std::string        programName;
-	u64                lastWriteTimestamp; // What is this for?
-};
-
 struct OpenGL_Info
 {
 	char* version;
@@ -52,7 +44,7 @@ enum Mode
 {
 	Mode_TexturedQuad,
 	Mode_Count,
-
+	Mode_Mesh,
 };
 
 struct VertexV3V2
@@ -61,7 +53,7 @@ struct VertexV3V2
 	glm::vec2 uv;
 };
 
-const VertexV3V2 vertices[] = 
+const VertexV3V2 vertices[] =
 {
 	{ glm::vec3(-0.5, -0.5, 0.0),  glm::vec2(0.0, 0.0) },
 	{ glm::vec3(0.5, -0.5, 0.0),   glm::vec2(1.0, 0.0) },
@@ -104,14 +96,14 @@ struct Vao
 struct Submesh
 {
 	// where we store attributes
-	VertexBufferLayout vbLayout; 
+	VertexBufferLayout vbLayout;
 
 	// will be merged in the VBO (Vertex Buffer Object) and IBO (Index Buffer Object) in the Mesh
 	std::vector<float> vertices;
 	std::vector<u32> indices;
 
 	// to find the data for the submesh on the VBO and IBO buffers
-	u32 vertexOffset; 
+	u32 vertexOffset;
 	u32 indexOffset;
 
 	// Vertex Attribute Object
@@ -144,6 +136,15 @@ struct Model
 	std::vector<u32> materialIdx;
 };
 
+struct Program
+{
+	GLuint             handle;
+	std::string        filepath;
+	std::string        programName;
+	u64                lastWriteTimestamp; // What is this for?
+	VertexBufferLayout vertexInputLayout;
+};
+
 struct App
 {
 	// Loop
@@ -174,6 +175,10 @@ struct App
 	u32 blackTexIdx;
 	u32 normalTexIdx;
 	u32 magentaTexIdx;
+	u32 patrickTexIdx;
+
+	// model indices
+	u32 patrickModel;
 
 	// Mode
 	Mode mode;
@@ -185,11 +190,10 @@ struct App
 
 	// Location of the texture uniform in the textured quad shader
 	GLuint programUniformTexture;
+	GLuint texturedMeshProgram_uTexture;
 
 	// VAO object to link our screen filling quad with our textured quad shader
 	GLuint vao;
-
-
 };
 
 void Init(App* app);
