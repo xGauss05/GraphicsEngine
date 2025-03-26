@@ -139,6 +139,8 @@ struct Model
 struct Camera 
 {
 	vec3 position;
+	vec3 target;
+	vec3 direction;
 	float fov;
 	float znear;
 	float zfar;

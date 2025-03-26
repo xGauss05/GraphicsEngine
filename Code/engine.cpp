@@ -637,6 +637,7 @@ void Init(App* app)
 	{
 		glDebugMessageCallback(OnGlError, app);
 	}
+	glEnable(GL_DEPTH_TEST);
 
 	GetOpenGLContext(app);
 
@@ -752,6 +753,9 @@ void RenderMeshMode(App* app)
 void Render(App* app)
 {
 	Camera camera = {};
+	camera.position = glm::vec3(0.0f, 0.0f, 3.0f);
+	camera.target = glm::vec3(0.0f);
+	camera.direction = glm::normalize(camera.position - camera.target);
 	camera.znear = 0.1f;
 	camera.zfar = 1000.0f;
 
@@ -759,8 +763,10 @@ void Render(App* app)
 
 	glm::mat4 projection = glm::perspective(glm::radians(60.0f), aspectRatio, camera.znear, camera.zfar);
 	// eye, center, up
-	vec3 upVector = vec3{ 0, 1, 0 };
-	//glm::mat4 view = glm::lookAt(camera.position, camera.target, upVector);
+	glm::vec3 up = glm::vec3{ 0.0f, 1.0f, 0.0f };
+	glm::vec3 cameraRight = glm::normalize(glm::cross(up, camera.direction));
+	glm::vec3 cameraUp = glm::cross(camera.direction, cameraRight);
+	glm::mat4 view = glm::lookAt(camera.position, camera.target, up);
 
 	// perspective division
 	// x/w y/w z/w to obtain NDC (normalized device coordinates)
