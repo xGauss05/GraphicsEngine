@@ -5,6 +5,7 @@
 #pragma once
 
 #include "platform.h"
+#include "buffer_management.h"
 #include <glad/glad.h>
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
@@ -151,16 +152,30 @@ struct Program
 	GLuint             handle;
 	std::string        filepath;
 	std::string        programName;
-	u64                lastWriteTimestamp; // What is this for?
+	u64                lastWriteTimestamp;
 	VertexShaderLayout vertexInputLayout;
+};
+
+struct Entity 
+{
+	glm::mat4 worldMatrix;
+	u32 modelIndex;
+	u32 localParamsOffset;
+	u32 localParamsSize;
+};
+
+enum LightType
+{
+	LightType_Directional,
+	LightType_Point
 };
 
 struct Light
 {
-	unsigned int type; // 0 // use lightype xd
-	vec3 color;		   // 16
-	vec3 direction;	   // 32
-	vec3 position;	   // 48
+	LightType type;
+	vec3 color;
+	vec3 direction;
+	vec3 position;
 };
 
 struct App
@@ -182,6 +197,8 @@ struct App
 	std::vector<Material> materials;
 	std::vector<Mesh>     meshes;
 	std::vector<Model>    models;
+	std::vector<Entity>   entities;
+	std::vector<Light>    lights;
 
 	// program indices
 	u32 texturedGeometryProgramIdx;
@@ -212,6 +229,13 @@ struct App
 
 	// VAO object to link our screen filling quad with our textured quad shader
 	GLuint vao;
+
+	Camera camera;
+	glm::mat4 worldMatrix;
+	glm::mat4 worldViewProjectionMatrix;
+
+	// buffers
+	Buffer uniformBuffer;
 };
 
 void Init(App* app);

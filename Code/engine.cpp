@@ -564,6 +564,43 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
 	return vaoHandle;
 }
 
+// GLM functions
+glm::mat4 TransformScale(const vec3& scaleFactors) 
+{
+	glm::mat4 transform = glm::scale(scaleFactors);
+	return transform;
+}
+
+glm::mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors) 
+{
+	glm::mat4 transform = glm::translate(pos);
+	transform = scale(transform, scaleFactors);
+	return transform;
+}
+
+// Camera functions
+void CameraCalculation(App* app) 
+{
+	float camSpeed = 0.8f;
+	if (app->input.keys[K_W]) { app->camera.position.y += app->deltaTime * camSpeed; }
+	if (app->input.keys[K_A]) { app->camera.position.x -= app->deltaTime * camSpeed; }
+	if (app->input.keys[K_S]) { app->camera.position.y -= app->deltaTime * camSpeed; }
+	if (app->input.keys[K_D]) { app->camera.position.x += app->deltaTime * camSpeed; }
+
+	float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
+	glm::vec3 up = glm::vec3{ 0.0f, 1.0f, 0.0f };
+	glm::vec3 cameraRight = glm::normalize(glm::cross(up, app->camera.direction));
+	glm::vec3 cameraUp = glm::cross(app->camera.direction, cameraRight);
+
+	glm::mat4 projection = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.znear, app->camera.zfar);
+	glm::mat4 view = glm::lookAt(app->camera.position, app->camera.target, up); // eye, center, up
+
+	vec3 pos = vec3(0.0f, 1.5f, -2.0f); // Entity position
+	vec3 scaleFactors = vec3(0.45f);
+	app->worldMatrix = TransformPositionScale(pos, scaleFactors);
+	app->worldViewProjectionMatrix = projection * view * app->worldMatrix;
+}
+
 // Init functions
 void InitLoadTextures(App* app)
 {
@@ -639,10 +676,28 @@ void Init(App* app)
 	}
 	glEnable(GL_DEPTH_TEST);
 
+	GLint maxUniformBufferSize;
+	glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &maxUniformBufferSize);
+
+	GLint uniformBlockAlignment;
+	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &uniformBlockAlignment);
+
+	app->uniformBuffer = CreateBuffer(maxUniformBufferSize, GL_UNIFORM_BUFFER, GL_STREAM_DRAW);
+
+	// Camera init
+	app->camera = {};
+	app->camera.position = glm::vec3(0.0f, 0.0f, 3.0f);
+	app->camera.target = glm::vec3(0.0f);
+	app->camera.direction = glm::normalize(app->camera.position - app->camera.target);
+	app->camera.znear = 0.1f;
+	app->camera.zfar = 1000.0f;
+	app->camera.fov = 60.0f;
+
+	CameraCalculation(app);
+
 	GetOpenGLContext(app);
 
 	InitLoadTextures(app);
-
 	InitQuadMode(app);
 
 	InitMeshMode(app);
@@ -675,14 +730,8 @@ void Gui(App* app)
 	InfoWindow(app);
 }
 
-// Update -- where input and hot reload are
-void Update(App* app)
+void HotReload(App* app) 
 {
-	// You can handle app->input keyboard/mouse here
-	if (app->input.keys[K_ESCAPE]) app->isRunning = false;
-	if (app->input.keys[K_Q] && app->mode != Mode_TexturedQuad) app->mode = Mode_TexturedQuad;
-	if (app->input.keys[K_M] && app->mode != Mode_Mesh) app->mode = Mode_Mesh;
-
 	// Check timestamp / reload
 	for (u64 i = 0; i < app->programs.size(); i++)
 	{
@@ -698,6 +747,36 @@ void Update(App* app)
 			program.lastWriteTimestamp = currentTimestamp;
 		}
 	}
+}
+
+// Update -- where input, hot reload, and buffer ordering are
+void Update(App* app)
+{
+	// You can handle app->input keyboard/mouse here
+	if (app->input.keys[K_ESCAPE]) app->isRunning = false;
+	if (app->input.keys[K_Q] && app->mode != Mode_TexturedQuad) app->mode = Mode_TexturedQuad;
+	if (app->input.keys[K_M] && app->mode != Mode_Mesh) app->mode = Mode_Mesh;
+
+	CameraCalculation(app);
+
+	HotReload(app);
+
+	// Push data into the buffer ordered according to the uniform block
+	MapBuffer(app->uniformBuffer, GL_WRITE_ONLY);
+
+	memcpy((u8*)app->uniformBuffer.data + app->uniformBuffer.head, glm::value_ptr(app->worldMatrix), sizeof(glm::mat4));
+	app->uniformBuffer.head += sizeof(glm::mat4);
+
+	memcpy((u8*)app->uniformBuffer.data + app->uniformBuffer.head, glm::value_ptr(app->worldViewProjectionMatrix), sizeof(glm::mat4));
+	app->uniformBuffer.head += sizeof(glm::mat4);
+
+	UnmapBuffer(app->uniformBuffer);
+
+#define BINDING(b) b
+
+	u32 blockOffset = 0;
+	u32 blockSize = sizeof(glm::mat4) * 2;
+	glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->uniformBuffer.handle, blockOffset, blockSize);
 }
 
 // Render functions
@@ -752,25 +831,6 @@ void RenderMeshMode(App* app)
 
 void Render(App* app)
 {
-	Camera camera = {};
-	camera.position = glm::vec3(0.0f, 0.0f, 3.0f);
-	camera.target = glm::vec3(0.0f);
-	camera.direction = glm::normalize(camera.position - camera.target);
-	camera.znear = 0.1f;
-	camera.zfar = 1000.0f;
-
-	float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
-
-	glm::mat4 projection = glm::perspective(glm::radians(60.0f), aspectRatio, camera.znear, camera.zfar);
-	// eye, center, up
-	glm::vec3 up = glm::vec3{ 0.0f, 1.0f, 0.0f };
-	glm::vec3 cameraRight = glm::normalize(glm::cross(up, camera.direction));
-	glm::vec3 cameraUp = glm::cross(camera.direction, cameraRight);
-	glm::mat4 view = glm::lookAt(camera.position, camera.target, up);
-
-	// perspective division
-	// x/w y/w z/w to obtain NDC (normalized device coordinates)
-
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
