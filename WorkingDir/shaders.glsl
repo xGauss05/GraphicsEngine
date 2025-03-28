@@ -68,6 +68,8 @@ void main()
 #elif defined(FRAGMENT) ///////////////////////////////////////////////
 
 in vec2 vTexCoord;
+in vec3 vPosition;
+in vec3 vNormal;
 
 uniform sampler2D uTexture;
 
@@ -76,6 +78,7 @@ layout(location = 0) out vec4 oColor;
 void main()
 {
 	oColor = texture(uTexture, vTexCoord);
+	//oColor = vec4(vNormal, 1.0);
 }
 
 #endif
