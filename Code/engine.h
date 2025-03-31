@@ -160,8 +160,8 @@ struct Entity
 {
 	glm::mat4 worldMatrix;
 	u32 modelIndex;
-	u32 localParamsOffset;
-	u32 localParamsSize;
+	u32 head;
+	u32 size;
 };
 
 enum LightType
@@ -231,11 +231,13 @@ struct App
 	GLuint vao;
 
 	Camera camera;
-	glm::mat4 worldMatrix;
 	glm::mat4 worldViewProjectionMatrix;
 
 	// buffers
 	Buffer uniformBuffer;
+	GLint uniformBlockAlignment;
+	GLint maxUniformBufferSize;
+
 };
 
 void Init(App* app);

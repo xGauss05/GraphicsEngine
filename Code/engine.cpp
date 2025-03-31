@@ -565,13 +565,13 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
 }
 
 // GLM functions
-glm::mat4 TransformScale(const vec3& scaleFactors) 
+glm::mat4 TransformScale(const vec3& scaleFactors)
 {
 	glm::mat4 transform = glm::scale(scaleFactors);
 	return transform;
 }
 
-glm::mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors) 
+glm::mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
 {
 	glm::mat4 transform = glm::translate(pos);
 	transform = scale(transform, scaleFactors);
@@ -579,7 +579,7 @@ glm::mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
 }
 
 // Camera functions
-void CameraCalculation(App* app) 
+void CameraMovement(App* app)
 {
 	float camSpeed = 0.8f;
 	if (app->input.keys[K_W]) { app->camera.position.y += app->deltaTime * camSpeed; }
@@ -587,18 +587,6 @@ void CameraCalculation(App* app)
 	if (app->input.keys[K_S]) { app->camera.position.y -= app->deltaTime * camSpeed; }
 	if (app->input.keys[K_D]) { app->camera.position.x += app->deltaTime * camSpeed; }
 
-	float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
-	glm::vec3 up = glm::vec3{ 0.0f, 1.0f, 0.0f };
-	glm::vec3 cameraRight = glm::normalize(glm::cross(up, app->camera.direction));
-	glm::vec3 cameraUp = glm::cross(app->camera.direction, cameraRight);
-
-	glm::mat4 projection = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.znear, app->camera.zfar);
-	glm::mat4 view = glm::lookAt(app->camera.position, app->camera.target, up); // eye, center, up
-
-	vec3 pos = vec3(0.0f, 1.5f, -2.0f); // Entity position
-	vec3 scaleFactors = vec3(0.45f);
-	app->worldMatrix = TransformPositionScale(pos, scaleFactors);
-	app->worldViewProjectionMatrix = projection * view * app->worldMatrix;
 }
 
 // Init functions
@@ -666,6 +654,18 @@ void InitMeshMode(App* app)
 	Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
 
 	app->texturedMeshProgram_uTexture = glGetUniformLocation(texturedMeshProgram.handle, "uTexture");
+
+	Entity en1 = { TransformPositionScale(vec3(2.0f, 1.5f, -2.0f),  vec3(0.45f)), app->patrickModel };
+	Entity en2 = { TransformPositionScale(vec3(-2.0f, 1.5f, -2.0f), vec3(0.45f)), app->patrickModel };
+	Entity en3 = { TransformPositionScale(vec3(0.0f, 1.5f, -2.0f),  vec3(0.45f)), app->patrickModel };
+
+	app->entities.push_back(en1);
+	app->entities.push_back(en2);
+	app->entities.push_back(en3);
+
+	//Light li1 = { LightType_Directional, vec3(1.0), vec3(1.0), vec3(1.0) };
+
+	//app->lights.push_back(li1);
 }
 
 void Init(App* app)
@@ -674,15 +674,13 @@ void Init(App* app)
 	{
 		glDebugMessageCallback(OnGlError, app);
 	}
+
 	glEnable(GL_DEPTH_TEST);
 
-	GLint maxUniformBufferSize;
-	glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &maxUniformBufferSize);
+	glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->maxUniformBufferSize);
+	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBlockAlignment);
 
-	GLint uniformBlockAlignment;
-	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &uniformBlockAlignment);
-
-	app->uniformBuffer = CreateBuffer(maxUniformBufferSize, GL_UNIFORM_BUFFER, GL_STREAM_DRAW);
+	app->uniformBuffer = CreateConstantBuffer(app->maxUniformBufferSize);
 
 	// Camera init
 	app->camera = {};
@@ -693,7 +691,7 @@ void Init(App* app)
 	app->camera.zfar = 1000.0f;
 	app->camera.fov = 60.0f;
 
-	CameraCalculation(app);
+	CameraMovement(app);
 
 	GetOpenGLContext(app);
 
@@ -702,7 +700,7 @@ void Init(App* app)
 
 	InitMeshMode(app);
 
-	//app->mode = Mode_TexturedQuad; // default mode
+	app->mode = Mode_Mesh; // default mode
 }
 
 // GUI functions
@@ -730,7 +728,7 @@ void Gui(App* app)
 	InfoWindow(app);
 }
 
-void HotReload(App* app) 
+void HotReload(App* app)
 {
 	// Check timestamp / reload
 	for (u64 i = 0; i < app->programs.size(); i++)
@@ -757,26 +755,34 @@ void Update(App* app)
 	if (app->input.keys[K_Q] && app->mode != Mode_TexturedQuad) app->mode = Mode_TexturedQuad;
 	if (app->input.keys[K_M] && app->mode != Mode_Mesh) app->mode = Mode_Mesh;
 
-	CameraCalculation(app);
-
 	HotReload(app);
+
+	CameraMovement(app);
+
+	float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
+	vec3 up = vec3{ 0.0f, 1.0f, 0.0f };
+	glm::mat4 projection = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.znear, app->caDmera.zfar);
+	glm::mat4 view = glm::lookAt(app->camera.position, app->camera.target, up); // eye, center, up
 
 	// Push data into the buffer ordered according to the uniform block
 	MapBuffer(app->uniformBuffer, GL_WRITE_ONLY);
 
-	memcpy((u8*)app->uniformBuffer.data + app->uniformBuffer.head, glm::value_ptr(app->worldMatrix), sizeof(glm::mat4));
-	app->uniformBuffer.head += sizeof(glm::mat4);
+	for (Entity& e : app->entities)
+	{
+		AlignHead(app->uniformBuffer, app->uniformBlockAlignment);
+		app->worldViewProjectionMatrix = projection * view * e.worldMatrix;
 
-	memcpy((u8*)app->uniformBuffer.data + app->uniformBuffer.head, glm::value_ptr(app->worldViewProjectionMatrix), sizeof(glm::mat4));
-	app->uniformBuffer.head += sizeof(glm::mat4);
+		e.head = app->uniformBuffer.head;
+
+		PushMat4(app->uniformBuffer, e.worldMatrix);
+		PushMat4(app->uniformBuffer, app->worldViewProjectionMatrix);
+
+		e.size = app->uniformBuffer.head - e.head;
+
+		ELOG("YOOO");
+	}
 
 	UnmapBuffer(app->uniformBuffer);
-
-#define BINDING(b) b
-
-	u32 blockOffset = 0;
-	u32 blockSize = sizeof(glm::mat4) * 2;
-	glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->uniformBuffer.handle, blockOffset, blockSize);
 }
 
 // Render functions
@@ -805,23 +811,29 @@ void RenderMeshMode(App* app)
 	Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
 	glUseProgram(texturedMeshProgram.handle);
 
-	Model& model = app->models[app->patrickModel];
-	Mesh& mesh = app->meshes[model.meshIdx];
-
-	for (u32 i = 0; i < mesh.submeshes.size(); i++)
+	for (Entity e : app->entities)
 	{
-		GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
-		glBindVertexArray(vao);
+		Model& model = app->models[e.modelIndex];
+		Mesh& mesh = app->meshes[model.meshIdx];
 
-		u32 subMeshMaterialIdx = model.materialIdx[i];
-		Material& submeshMaterial = app->materials[subMeshMaterialIdx];
+		// Binding 1
+		glBindBufferRange(GL_UNIFORM_BUFFER, 1, app->uniformBuffer.handle, e.head, e.size);
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
-		glUniform1i(app->texturedMeshProgram_uTexture, 0);
+		for (u32 i = 0; i < mesh.submeshes.size(); i++)
+		{
+			GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
+			glBindVertexArray(vao);
 
-		Submesh& submesh = mesh.submeshes[i];
-		glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+			u32 subMeshMaterialIdx = model.materialIdx[i];
+			Material& submeshMaterial = app->materials[subMeshMaterialIdx];
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+			glUniform1i(app->texturedMeshProgram_uTexture, 0);
+
+			Submesh& submesh = mesh.submeshes[i];
+			glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+		}
 
 	}
 
