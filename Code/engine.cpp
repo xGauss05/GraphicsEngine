@@ -761,7 +761,7 @@ void Update(App* app)
 
 	float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
 	vec3 up = vec3{ 0.0f, 1.0f, 0.0f };
-	glm::mat4 projection = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.znear, app->caDmera.zfar);
+	glm::mat4 projection = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.znear, app->camera.zfar);
 	glm::mat4 view = glm::lookAt(app->camera.position, app->camera.target, up); // eye, center, up
 
 	// Push data into the buffer ordered according to the uniform block
