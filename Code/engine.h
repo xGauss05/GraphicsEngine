@@ -238,6 +238,9 @@ struct App
 	GLint uniformBlockAlignment;
 	GLint maxUniformBufferSize;
 
+	u32 globalParamsOffset;
+	u32 globalParamsSize;
+
 };
 
 void Init(App* app);

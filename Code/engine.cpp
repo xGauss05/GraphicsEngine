@@ -582,10 +582,18 @@ glm::mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
 void CameraMovement(App* app)
 {
 	float camSpeed = 0.8f;
+
+	// Position
 	if (app->input.keys[K_W]) { app->camera.position.y += app->deltaTime * camSpeed; }
 	if (app->input.keys[K_A]) { app->camera.position.x -= app->deltaTime * camSpeed; }
 	if (app->input.keys[K_S]) { app->camera.position.y -= app->deltaTime * camSpeed; }
 	if (app->input.keys[K_D]) { app->camera.position.x += app->deltaTime * camSpeed; }
+
+	// Target
+	if (app->input.keys[K_I]) { app->camera.target.y += app->deltaTime * camSpeed; }
+	if (app->input.keys[K_J]) { app->camera.target.x -= app->deltaTime * camSpeed; }
+	if (app->input.keys[K_K]) { app->camera.target.y -= app->deltaTime * camSpeed; }
+	if (app->input.keys[K_L]) { app->camera.target.x += app->deltaTime * camSpeed; }
 
 }
 
@@ -663,9 +671,9 @@ void InitMeshMode(App* app)
 	app->entities.push_back(en2);
 	app->entities.push_back(en3);
 
-	//Light li1 = { LightType_Directional, vec3(1.0), vec3(1.0), vec3(1.0) };
+	Light li1 = { LightType_Directional, vec3(1.0), vec3(1.0), vec3(1.0) };
 
-	//app->lights.push_back(li1);
+	app->lights.push_back(li1);
 }
 
 void Init(App* app)
@@ -767,6 +775,22 @@ void Update(App* app)
 	// Push data into the buffer ordered according to the uniform block
 	MapBuffer(app->uniformBuffer, GL_WRITE_ONLY);
 
+	app->globalParamsOffset = app->uniformBuffer.head;
+	PushVec3(app->uniformBuffer, app->camera.position);
+	PushUInt(app->uniformBuffer, app->lights.size());
+
+	for(Light& l : app->lights)
+	{
+		AlignHead(app->uniformBuffer, sizeof(vec4));
+
+		PushUInt(app->uniformBuffer, l.type);
+		PushVec3(app->uniformBuffer, l.color);
+		PushVec3(app->uniformBuffer, l.direction);
+		PushVec3(app->uniformBuffer, l.position);
+	}
+
+	app->globalParamsSize = app->uniformBuffer.head - app->globalParamsOffset;
+
 	for (Entity& e : app->entities)
 	{
 		AlignHead(app->uniformBuffer, app->uniformBlockAlignment);
@@ -779,7 +803,6 @@ void Update(App* app)
 
 		e.size = app->uniformBuffer.head - e.head;
 
-		ELOG("YOOO");
 	}
 
 	UnmapBuffer(app->uniformBuffer);
@@ -810,6 +833,8 @@ void RenderMeshMode(App* app)
 {
 	Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
 	glUseProgram(texturedMeshProgram.handle);
+
+	glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->uniformBuffer.handle, app->globalParamsOffset, app->globalParamsSize);
 
 	for (Entity e : app->entities)
 	{
