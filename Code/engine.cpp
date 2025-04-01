@@ -6,9 +6,11 @@
 //
 
 #include "engine.h"
+#include "colors.h"
 #include <imgui.h>
 #include <stb_image.h>
 #include <stb_image_write.h>
+
 
 // Open GL functions
 GLuint CreateProgramFromSource(String programSource, const char* shaderName)
@@ -671,7 +673,7 @@ void InitMeshMode(App* app)
 	app->entities.push_back(en2);
 	app->entities.push_back(en3);
 
-	Light li1 = { LightType_Directional, vec3(1.0), vec3(1.0), vec3(1.0) };
+	Light li1 = { LightType_Directional, Colors::White, vec3(1.0), vec3(1.0) };
 
 	app->lights.push_back(li1);
 }
