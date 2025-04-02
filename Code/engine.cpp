@@ -672,9 +672,13 @@ void InitMeshMode(App* app)
 	app->entities.push_back(en2);
 	app->entities.push_back(en3);
 
-	Light li1 = { LightType_Directional, Colors::White, vec3(1.0), vec3(1.0) };
+	Light li1 = { LightType_Directional, Colors::Yellow, vec3(1.0), vec3(1.0) };
+	Light li2 = { LightType_Point, Colors::Magenta, vec3(1.0), vec3(1.0) };
+	Light li3 = { LightType_Directional, Colors::Cyan, vec3(1.0), vec3(1.0) };
 
-	app->lights.push_back(li1);
+	app->lights.push_back(li1);	
+	app->lights.push_back(li2);
+	app->lights.push_back(li3);
 }
 
 void Init(App* app)
@@ -794,7 +798,7 @@ void Update(App* app)
 		PushVec3(app->uniformBuffer, l.position);
 	}
 
-	app->globalParamsSize = app->uniformBuffer.head - app->globalParamsOffset;
+	app->globalParamsSize = app->uniformBuffer.head - app->globalParamsOffset; // It's doing -0
 
 	for (Entity& e : app->entities)
 	{
@@ -841,7 +845,7 @@ void RenderMeshMode(App* app)
 
 	glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->uniformBuffer.handle, app->globalParamsOffset, app->globalParamsSize);
 
-	for (Entity e : app->entities)
+	for (const Entity& e : app->entities)
 	{
 		Model& model = app->models[e.modelIndex];
 		Mesh& mesh = app->meshes[model.meshIdx];
