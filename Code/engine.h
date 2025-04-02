@@ -88,7 +88,7 @@ struct VertexShaderLayout
 	std::vector<VertexShaderAttribute> vsAttributes;
 };
 
-struct Vao
+struct Vao 
 {
 	GLuint handle;
 	GLuint programHandle;
@@ -137,7 +137,7 @@ struct Model
 	std::vector<u32> materialIdx;
 };
 
-struct Camera 
+struct Camera
 {
 	vec3 position;
 	vec3 target;
@@ -156,7 +156,7 @@ struct Program
 	VertexShaderLayout vertexInputLayout;
 };
 
-struct Entity 
+struct Entity
 {
 	glm::mat4 worldMatrix;
 	u32 modelIndex;

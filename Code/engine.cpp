@@ -11,7 +11,6 @@
 #include <stb_image.h>
 #include <stb_image_write.h>
 
-
 // Open GL functions
 GLuint CreateProgramFromSource(String programSource, const char* shaderName)
 {
@@ -725,10 +724,14 @@ void InfoWindow(App* app)
 
 	if (ImGui::CollapsingHeader("Extensions", ImGuiTreeNodeFlags_None))
 	{
+		ImGui::BeginChild("ExtensionsList", ImVec2(0, 150), true, ImGuiWindowFlags_HorizontalScrollbar); // Área de scroll con 150px de alto
+
 		for (const auto& extension : app->openglInfo.extensions)
 		{
 			ImGui::Text("%s", extension.c_str());
 		}
+
+		ImGui::EndChild();
 	}
 	ImGui::End();
 }
@@ -781,7 +784,7 @@ void Update(App* app)
 	PushVec3(app->uniformBuffer, app->camera.position);
 	PushUInt(app->uniformBuffer, app->lights.size());
 
-	for(Light& l : app->lights)
+	for (Light& l : app->lights)
 	{
 		AlignHead(app->uniformBuffer, sizeof(vec4));
 
