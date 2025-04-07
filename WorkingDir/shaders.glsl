@@ -96,7 +96,11 @@ layout(binding = 0, std140) uniform GlobalParams
 	Light uLight[16];
 };
 
-layout(location = 0) out vec4 oColor;
+//layout(location = 0) out vec4 oColor;
+layout(location = 0) out vec4 rt0; // Albedo, Ambient Occlusion
+layout(location = 1) out vec4 rt1; // Specular, Roughness
+layout(location = 2) out vec4 rt2; // Normals
+layout(location = 3) out vec4 rt3; // Emissive + Lightmaps
 
 void main()
 {
@@ -128,7 +132,10 @@ void main()
 
     // Texture + light
     vec3 textureColor = texture(uTexture, vTexCoord).rgb;
-    oColor = vec4(textureColor * resultColor, 1.0);
+    //oColor = vec4(textureColor * resultColor, 1.0);
+	rt0 = vec4(textureColor * resultColor, 1.0);
+	rt2 = vec4(vNormal, 1.0);
+	
 }
 
 #endif

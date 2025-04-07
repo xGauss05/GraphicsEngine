@@ -56,10 +56,10 @@ struct VertexV3V2
 
 const VertexV3V2 vertices[] =
 {
-	{ glm::vec3(-0.5, -0.5, 0.0),  glm::vec2(0.0, 0.0) },
-	{ glm::vec3(0.5, -0.5, 0.0),   glm::vec2(1.0, 0.0) },
-	{ glm::vec3(0.5,  0.5, 0.0),   glm::vec2(1.0, 1.0) },
-	{ glm::vec3(-0.5,  0.5, 0.0),  glm::vec2(0.0, 1.0) },
+	{ glm::vec3(-1.0, -1.0, 0.0),  glm::vec2(0.0, 0.0) },
+	{ glm::vec3(1.0, -1.0, 0.0),   glm::vec2(1.0, 0.0) },
+	{ glm::vec3(1.0,  1.0, 0.0),   glm::vec2(1.0, 1.0) },
+	{ glm::vec3(-1.0,  1.0, 0.0),  glm::vec2(0.0, 1.0) },
 };
 
 const u16 indices[] = { 0,1,2,0,2,3 };
@@ -240,6 +240,14 @@ struct App
 
 	u32 globalParamsOffset;
 	u32 globalParamsSize;
+
+	// framebuffers
+	GLuint albedoAO_attachmentHandle;
+	GLuint specularRoughness_attachmentHandle;
+	GLuint normals_attachmentHandle;
+	GLuint emissiveLightmaps_attachmentHandle;
+	GLuint depthAttachmentHandle;
+	GLuint framebufferHandle;
 
 };
 
