@@ -46,6 +46,7 @@ enum Mode
 	Mode_TexturedQuad,
 	Mode_Count,
 	Mode_Mesh,
+	Mode_Framebuffer
 };
 
 struct VertexV3V2
@@ -88,7 +89,7 @@ struct VertexShaderLayout
 	std::vector<VertexShaderAttribute> vsAttributes;
 };
 
-struct Vao 
+struct Vao
 {
 	GLuint handle;
 	GLuint programHandle;
@@ -226,6 +227,11 @@ struct App
 	// Location of the texture uniform in the textured quad shader
 	GLuint programUniformTexture;
 	GLuint texturedMeshProgram_uTexture;
+	GLuint texturedMeshProgram_uNormal;
+	GLuint texturedMeshProgram_uAO;
+	GLuint texturedMeshProgram_uEmissive;
+	GLuint texturedMeshProgram_uSpecular;
+	GLuint texturedMeshProgram_uRoughness;
 
 	// VAO object to link our screen filling quad with our textured quad shader
 	GLuint vao;

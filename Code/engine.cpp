@@ -663,6 +663,12 @@ void InitMeshMode(App* app)
 	Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
 
 	app->texturedMeshProgram_uTexture = glGetUniformLocation(texturedMeshProgram.handle, "uTexture");
+	app->texturedMeshProgram_uNormal = glGetUniformLocation(texturedMeshProgram.handle, "uNormal");
+	app->texturedMeshProgram_uAO = glGetUniformLocation(texturedMeshProgram.handle, "uAO");
+	app->texturedMeshProgram_uEmissive = glGetUniformLocation(texturedMeshProgram.handle, "uEmissive");
+	app->texturedMeshProgram_uSpecular = glGetUniformLocation(texturedMeshProgram.handle, "uSpecular");
+	app->texturedMeshProgram_uRoughness = glGetUniformLocation(texturedMeshProgram.handle, "uRoughness");
+
 
 	Entity en1 = { TransformPositionScale(vec3(2.0f, 1.5f, -2.0f),  vec3(0.45f)), app->patrickModel };
 	Entity en2 = { TransformPositionScale(vec3(-2.0f, 1.5f, -2.0f), vec3(0.45f)), app->patrickModel };
@@ -686,6 +692,36 @@ void InitFramebuffer(App* app)
 	// Framebuffer
 	glGenTextures(1, &app->albedoAO_attachmentHandle);
 	glBindTexture(GL_TEXTURE_2D, app->albedoAO_attachmentHandle);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glGenTextures(1, &app->specularRoughness_attachmentHandle);
+	glBindTexture(GL_TEXTURE_2D, app->specularRoughness_attachmentHandle);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glGenTextures(1, &app->normals_attachmentHandle);
+	glBindTexture(GL_TEXTURE_2D, app->normals_attachmentHandle);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glGenTextures(1, &app->emissiveLightmaps_attachmentHandle);
+	glBindTexture(GL_TEXTURE_2D, app->emissiveLightmaps_attachmentHandle);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -730,7 +766,14 @@ void InitFramebuffer(App* app)
 		}
 	}
 
-	glDrawBuffers(1, &app->albedoAO_attachmentHandle);
+	//glDrawBuffers(1, &app->albedoAO_attachmentHandle);
+	GLenum drawBuffers[] = {
+	GL_COLOR_ATTACHMENT0,
+	GL_COLOR_ATTACHMENT1,
+	GL_COLOR_ATTACHMENT2,
+	GL_COLOR_ATTACHMENT3
+	};
+	glDrawBuffers(4, drawBuffers);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -796,9 +839,33 @@ void InfoWindow(App* app)
 	ImGui::End();
 }
 
+void RenderModeWindow(App* app)
+{
+	ImGui::Begin("Render Mode");
+
+	if (ImGui::Button("Textured Quad"))
+	{
+		if (app->mode != Mode_TexturedQuad) app->mode = Mode_TexturedQuad;
+	}
+
+	if (ImGui::Button("Mesh"))
+	{
+		if (app->mode != Mode_Mesh) app->mode = Mode_Mesh;
+	}
+
+	if (ImGui::Button("Framebuffer"))
+	{
+		if (app->mode != Mode_Framebuffer) app->mode = Mode_Framebuffer;
+	}
+
+	ImGui::End();
+}
+
+// Gui -- where ImGui windows draw stuff
 void Gui(App* app)
 {
 	InfoWindow(app);
+	RenderModeWindow(app);
 }
 
 void HotReload(App* app)
@@ -827,6 +894,7 @@ void Update(App* app)
 	if (app->input.keys[K_ESCAPE]) app->isRunning = false;
 	if (app->input.keys[K_Q] && app->mode != Mode_TexturedQuad) app->mode = Mode_TexturedQuad;
 	if (app->input.keys[K_M] && app->mode != Mode_Mesh) app->mode = Mode_Mesh;
+	if (app->input.keys[K_F] && app->mode != Mode_Framebuffer) app->mode = Mode_Framebuffer;
 
 	HotReload(app);
 
@@ -876,6 +944,9 @@ void Update(App* app)
 // Render functions
 void RenderQuadMode(App* app)
 {
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 	Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
 	glUseProgram(programTexturedGeometry.handle); //bind shader
 	glBindVertexArray(app->vao);
@@ -896,6 +967,11 @@ void RenderQuadMode(App* app)
 
 void RenderMeshMode(App* app)
 {
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
 	Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
 	glUseProgram(texturedMeshProgram.handle);
 
@@ -931,24 +1007,59 @@ void RenderMeshMode(App* app)
 	glUseProgram(0);
 }
 
-void Render(App* app)
+void RenderFramebufferMode(App* app)
 {
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glEnable(GL_DEPTH_TEST);
+
 	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
 
 	GLuint drawBuffers[] = { app->albedoAO_attachmentHandle,
 							 app->specularRoughness_attachmentHandle,
 							 app->normals_attachmentHandle,
 							 app->emissiveLightmaps_attachmentHandle };
+
 	glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
 
 
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
-
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
+	RenderMeshMode(app);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
+	glUseProgram(programTexturedGeometry.handle); //bind shader
+	glBindVertexArray(app->vao);
+
+	glDisable(GL_DEPTH_TEST);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glUniform1i(app->programUniformTexture, 0);
+
+	// Albedo & Ambient Occlusion
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, app->albedoAO_attachmentHandle);
+
+	// Specular & Roughness
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, app->specularRoughness_attachmentHandle);
+
+	// Normals
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, app->normals_attachmentHandle);
+
+	// Emissive & Lightmaps
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, app->emissiveLightmaps_attachmentHandle);
+
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+}
+
+void Render(App* app)
+{
 	switch (app->mode)
 	{
 	case Mode_TexturedQuad:
@@ -959,25 +1070,13 @@ void Render(App* app)
 		RenderMeshMode(app);
 		break;
 
+	case Mode_Framebuffer:
+		RenderFramebufferMode(app);
+		break;
+
 	default:
 		break;
 	}
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
-	glUseProgram(programTexturedGeometry.handle); //bind shader
-	glBindVertexArray(app->vao);
-	glDisable(GL_DEPTH_TEST);
-	
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	glUniform1i(app->programUniformTexture, 0);
-	glActiveTexture(GL_TEXTURE0);
-	GLuint textureHandle = app->albedoAO_attachmentHandle;
-	glBindTexture(GL_TEXTURE_2D, textureHandle);
-
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
 	glBindVertexArray(0);
 	glUseProgram(0);

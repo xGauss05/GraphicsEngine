@@ -88,6 +88,11 @@ in vec3 vNormal;   // In world space
 in vec3 vViewDir;  // In world space
 
 uniform sampler2D uTexture;
+uniform sampler2D uNormal;
+uniform sampler2D uAO;
+uniform sampler2D uEmissive;
+uniform sampler2D uSpecular;
+uniform sampler2D uRoughness;
 
 layout(binding = 0, std140) uniform GlobalParams 
 {
@@ -115,8 +120,9 @@ void main()
         if (light.type == 0) // Directional light
 		{ 
             lightDir = normalize(-light.direction);
-        } else if (light.type == 1) 
-		{ // Point light
+        } 
+		else if (light.type == 1) // Point light
+		{ 
             lightDir = normalize(light.position - vPosition);
         }
 
