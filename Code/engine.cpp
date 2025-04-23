@@ -579,6 +579,13 @@ glm::mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
 	return transform;
 }
 
+// Utilities
+
+void ChangeAppMode(App* app, Mode mode)
+{
+	if (app->mode != mode) app->mode = mode;
+}
+
 // Camera functions
 void CameraMovement(App* app)
 {
@@ -845,17 +852,17 @@ void RenderModeWindow(App* app)
 
 	if (ImGui::Button("Textured Quad"))
 	{
-		if (app->mode != Mode_TexturedQuad) app->mode = Mode_TexturedQuad;
+		ChangeAppMode(app, Mode_TexturedQuad);
 	}
 
 	if (ImGui::Button("Mesh"))
 	{
-		if (app->mode != Mode_Mesh) app->mode = Mode_Mesh;
+		ChangeAppMode(app, Mode_Mesh);
 	}
 
 	if (ImGui::Button("Framebuffer"))
 	{
-		if (app->mode != Mode_Framebuffer) app->mode = Mode_Framebuffer;
+		ChangeAppMode(app, Mode_Framebuffer);
 	}
 
 	ImGui::End();
@@ -892,9 +899,9 @@ void Update(App* app)
 {
 	// You can handle app->input keyboard/mouse here
 	if (app->input.keys[K_ESCAPE]) app->isRunning = false;
-	if (app->input.keys[K_Q] && app->mode != Mode_TexturedQuad) app->mode = Mode_TexturedQuad;
-	if (app->input.keys[K_M] && app->mode != Mode_Mesh) app->mode = Mode_Mesh;
-	if (app->input.keys[K_F] && app->mode != Mode_Framebuffer) app->mode = Mode_Framebuffer;
+	if (app->input.keys[K_Q]) ChangeAppMode(app, Mode_TexturedQuad);
+	if (app->input.keys[K_M]) ChangeAppMode(app, Mode_Mesh);
+	if (app->input.keys[K_F]) ChangeAppMode(app, Mode_Framebuffer);
 
 	HotReload(app);
 
@@ -1081,3 +1088,5 @@ void Render(App* app)
 	glBindVertexArray(0);
 	glUseProgram(0);
 }
+
+
