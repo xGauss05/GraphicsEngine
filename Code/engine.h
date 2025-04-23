@@ -46,7 +46,9 @@ enum Mode
 	Mode_TexturedQuad,
 	Mode_Count,
 	Mode_Mesh,
-	Mode_Framebuffer
+	Mode_Framebuffer,
+	Mode_Normal,
+	Mode_Depth,
 };
 
 struct VertexV3V2
@@ -264,3 +266,4 @@ void Gui(App* app);
 void Update(App* app);
 
 void Render(App* app);
+

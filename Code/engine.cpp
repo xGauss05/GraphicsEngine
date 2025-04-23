@@ -749,6 +749,7 @@ void InitFramebuffer(App* app)
 
 	glGenFramebuffers(1, &app->framebufferHandle);
 	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
+
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, app->albedoAO_attachmentHandle, 0);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, app->specularRoughness_attachmentHandle, 0);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, app->normals_attachmentHandle, 0);
@@ -774,13 +775,7 @@ void InitFramebuffer(App* app)
 	}
 
 	//glDrawBuffers(1, &app->albedoAO_attachmentHandle);
-	GLenum drawBuffers[] = {
-	GL_COLOR_ATTACHMENT0,
-	GL_COLOR_ATTACHMENT1,
-	GL_COLOR_ATTACHMENT2,
-	GL_COLOR_ATTACHMENT3
-	};
-	glDrawBuffers(4, drawBuffers);
+
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -899,9 +894,11 @@ void Update(App* app)
 {
 	// You can handle app->input keyboard/mouse here
 	if (app->input.keys[K_ESCAPE]) app->isRunning = false;
-	if (app->input.keys[K_Q]) ChangeAppMode(app, Mode_TexturedQuad);
-	if (app->input.keys[K_M]) ChangeAppMode(app, Mode_Mesh);
-	if (app->input.keys[K_F]) ChangeAppMode(app, Mode_Framebuffer);
+	if (app->input.keys[K_1]) ChangeAppMode(app, Mode_TexturedQuad);
+	if (app->input.keys[K_2]) ChangeAppMode(app, Mode_Mesh);
+	if (app->input.keys[K_3]) ChangeAppMode(app, Mode_Framebuffer);
+	if (app->input.keys[K_4]) ChangeAppMode(app, Mode_Normal);
+	if (app->input.keys[K_5]) ChangeAppMode(app, Mode_Depth);
 
 	HotReload(app);
 
@@ -1023,10 +1020,12 @@ void RenderFramebufferMode(App* app)
 
 	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
 
-	GLuint drawBuffers[] = { app->albedoAO_attachmentHandle,
-							 app->specularRoughness_attachmentHandle,
-							 app->normals_attachmentHandle,
-							 app->emissiveLightmaps_attachmentHandle };
+	GLenum drawBuffers[] = {
+	GL_COLOR_ATTACHMENT0,
+	GL_COLOR_ATTACHMENT1,
+	GL_COLOR_ATTACHMENT2,
+	GL_COLOR_ATTACHMENT3
+	};
 
 	glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
 
@@ -1046,7 +1045,7 @@ void RenderFramebufferMode(App* app)
 
 	glUniform1i(app->programUniformTexture, 0);
 
-	// Albedo & Ambient Occlusion
+	 Albedo & Ambient Occlusion
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, app->albedoAO_attachmentHandle);
 
@@ -1054,7 +1053,7 @@ void RenderFramebufferMode(App* app)
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, app->specularRoughness_attachmentHandle);
 
-	// Normals
+	 Normals
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, app->normals_attachmentHandle);
 
@@ -1063,6 +1062,16 @@ void RenderFramebufferMode(App* app)
 	glBindTexture(GL_TEXTURE_2D, app->emissiveLightmaps_attachmentHandle);
 
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+}
+
+void RenderNormalMode(App* app)
+{
+
+}
+
+void RenderDepthMode(App* app)
+{
+
 }
 
 void Render(App* app)
@@ -1079,6 +1088,14 @@ void Render(App* app)
 
 	case Mode_Framebuffer:
 		RenderFramebufferMode(app);
+		break;
+
+	case Mode_Normal:
+		RenderNormalMode(app);
+		break;
+
+	case Mode_Depth:
+		RenderDepthMode(app);
 		break;
 
 	default:
