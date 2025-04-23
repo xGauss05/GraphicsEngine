@@ -1045,7 +1045,7 @@ void RenderFramebufferMode(App* app)
 
 	glUniform1i(app->programUniformTexture, 0);
 
-	 Albedo & Ambient Occlusion
+	// Albedo & Ambient Occlusion
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, app->albedoAO_attachmentHandle);
 
@@ -1053,7 +1053,7 @@ void RenderFramebufferMode(App* app)
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, app->specularRoughness_attachmentHandle);
 
-	 Normals
+	// Normals
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, app->normals_attachmentHandle);
 
