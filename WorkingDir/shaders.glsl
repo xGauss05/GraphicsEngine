@@ -106,6 +106,7 @@ layout(location = 0) out vec4 rt0; // Albedo, Ambient Occlusion
 layout(location = 1) out vec4 rt1; // Specular, Roughness
 layout(location = 2) out vec4 rt2; // Normals
 layout(location = 3) out vec4 rt3; // Emissive + Lightmaps
+layout(location = 4) out vec4 rt4; // Position
 
 void main()
 {
@@ -139,8 +140,11 @@ void main()
     // Texture + light
     vec3 textureColor = texture(uTexture, vTexCoord).rgb;
     //oColor = vec4(textureColor * resultColor, 1.0);
-	rt0 = vec4(textureColor * resultColor, 1.0);
-	rt2 = vec4(vNormal, 1.0);
+
+	rt0 = vec4(textureColor * resultColor, 1.0); // Albedo, Ambient Occlusion
+	rt2 = vec4(normalize(vNormal), 1.0); 		 // Normals
+	rt4 = vec4(vPosition, 1.0);		 // Position
+
 	
 }
 

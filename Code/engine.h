@@ -47,7 +47,9 @@ enum Mode
 	Mode_Count,
 	Mode_Mesh,
 	Mode_Framebuffer,
+	Mode_Albedo,
 	Mode_Normal,
+	Mode_Position,
 	Mode_Depth,
 };
 
@@ -254,6 +256,7 @@ struct App
 	GLuint specularRoughness_attachmentHandle;
 	GLuint normals_attachmentHandle;
 	GLuint emissiveLightmaps_attachmentHandle;
+	GLuint position_attachmentHandle;
 	GLuint depthAttachmentHandle;
 	GLuint framebufferHandle;
 
@@ -266,4 +269,3 @@ void Gui(App* app);
 void Update(App* app);
 
 void Render(App* app);
-

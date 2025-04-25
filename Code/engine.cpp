@@ -580,7 +580,6 @@ glm::mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
 }
 
 // Utilities
-
 void ChangeAppMode(App* app, Mode mode)
 {
 	if (app->mode != mode) app->mode = mode;
@@ -747,6 +746,16 @@ void InitFramebuffer(App* app)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+	glGenTextures(1, &app->position_attachmentHandle);
+	glBindTexture(GL_TEXTURE_2D, app->position_attachmentHandle);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, app->displaySize.x, app->displaySize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
 	glGenFramebuffers(1, &app->framebufferHandle);
 	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
 
@@ -775,6 +784,16 @@ void InitFramebuffer(App* app)
 	}
 
 	//glDrawBuffers(1, &app->albedoAO_attachmentHandle);
+
+	GLenum drawBuffers[] = {
+GL_COLOR_ATTACHMENT0,
+GL_COLOR_ATTACHMENT1,
+GL_COLOR_ATTACHMENT2,
+GL_COLOR_ATTACHMENT3,
+GL_COLOR_ATTACHMENT4,
+	};
+
+	glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -858,6 +877,21 @@ void RenderModeWindow(App* app)
 	if (ImGui::Button("Framebuffer"))
 	{
 		ChangeAppMode(app, Mode_Framebuffer);
+	}
+
+	if (ImGui::Button("Albedo"))
+	{
+		ChangeAppMode(app, Mode_Albedo);
+	}
+
+	if (ImGui::Button("Normal"))
+	{
+		ChangeAppMode(app, Mode_Normal);
+	}
+
+	if (ImGui::Button("Position"))
+	{
+		ChangeAppMode(app, Mode_Position);
 	}
 
 	ImGui::End();
@@ -1013,22 +1047,61 @@ void RenderMeshMode(App* app)
 
 void RenderFramebufferMode(App* app)
 {
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glEnable(GL_DEPTH_TEST);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
 
-	GLenum drawBuffers[] = {
-	GL_COLOR_ATTACHMENT0,
-	GL_COLOR_ATTACHMENT1,
-	GL_COLOR_ATTACHMENT2,
-	GL_COLOR_ATTACHMENT3
-	};
 
-	glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+	RenderMeshMode(app);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
+	glUseProgram(programTexturedGeometry.handle); //bind shader
+	glBindVertexArray(app->vao);
+
+	glDisable(GL_DEPTH_TEST);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glUniform1i(app->programUniformTexture, 0);
+
+	// Albedo & Ambient Occlusion
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, app->albedoAO_attachmentHandle);
+
+	// Specular & Roughness
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, app->specularRoughness_attachmentHandle);
+
+	// Normals
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, app->normals_attachmentHandle);
+
+	// Emissive & Lightmaps
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, app->emissiveLightmaps_attachmentHandle);
+
+	// Position
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, app->position_attachmentHandle);
+
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+}
+
+void RenderAlbedoMode(App* app)
+{
+	glEnable(GL_DEPTH_TEST);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
+
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
@@ -1066,12 +1139,63 @@ void RenderFramebufferMode(App* app)
 
 void RenderNormalMode(App* app)
 {
+	glEnable(GL_DEPTH_TEST);
 
+	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
+
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+	RenderMeshMode(app);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
+	glUseProgram(programTexturedGeometry.handle); //bind shader
+	glBindVertexArray(app->vao);
+
+	glDisable(GL_DEPTH_TEST);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glUniform1i(app->programUniformTexture, 0);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, app->normals_attachmentHandle);
+
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+}
+
+void RenderPositionMode(App* app)
+{
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	glDisable(GL_DEPTH_TEST);
+	glUseProgram(app->programs[app->texturedGeometryProgramIdx].handle);
+	glBindVertexArray(app->vao);
+
+	glUniform1i(app->programUniformTexture, 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, app->position_attachmentHandle);
+
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 }
 
 void RenderDepthMode(App* app)
 {
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
 
+	glUseProgram(app->programs[app->texturedGeometryProgramIdx].handle); // Asumiendo que tienes un shader para visualizar depth
+	glBindVertexArray(app->vao);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, app->depthAttachmentHandle);
+
+	glUniform1i(app->programUniformTexture, 0);
+
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 }
 
 void Render(App* app)
@@ -1090,8 +1214,16 @@ void Render(App* app)
 		RenderFramebufferMode(app);
 		break;
 
+	case Mode_Albedo:
+		RenderAlbedoMode(app);
+		break;
+
 	case Mode_Normal:
 		RenderNormalMode(app);
+		break;
+
+	case Mode_Position:
+		RenderPositionMode(app);
 		break;
 
 	case Mode_Depth:
@@ -1105,5 +1237,4 @@ void Render(App* app)
 	glBindVertexArray(0);
 	glUseProgram(0);
 }
-
 
