@@ -748,7 +748,7 @@ void InitFramebuffer(App* app)
 
 	glGenTextures(1, &app->position_attachmentHandle);
 	glBindTexture(GL_TEXTURE_2D, app->position_attachmentHandle);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, app->displaySize.x, app->displaySize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -763,6 +763,7 @@ void InitFramebuffer(App* app)
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, app->specularRoughness_attachmentHandle, 0);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, app->normals_attachmentHandle, 0);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, app->emissiveLightmaps_attachmentHandle, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, app->position_attachmentHandle, 0);
 
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, app->depthAttachmentHandle, 0);
 
@@ -1168,14 +1169,27 @@ void RenderNormalMode(App* app)
 
 void RenderPositionMode(App* app)
 {
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
 
-	glDisable(GL_DEPTH_TEST);
-	glUseProgram(app->programs[app->texturedGeometryProgramIdx].handle);
+	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
+
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+	RenderMeshMode(app);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
+	glUseProgram(programTexturedGeometry.handle); //bind shader
 	glBindVertexArray(app->vao);
 
+	glDisable(GL_DEPTH_TEST);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glUniform1i(app->programUniformTexture, 0);
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, app->position_attachmentHandle);
 
