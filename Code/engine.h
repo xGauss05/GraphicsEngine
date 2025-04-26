@@ -219,6 +219,8 @@ struct App
 
 	// model indices
 	u32 patrickModel;
+	u32 sphere;
+	u32 plane;
 
 	// Mode
 	Mode mode;
@@ -236,6 +238,7 @@ struct App
 	GLuint texturedMeshProgram_uEmissive;
 	GLuint texturedMeshProgram_uSpecular;
 	GLuint texturedMeshProgram_uRoughness;
+	GLuint texturedMeshProgram_uDepth;
 
 	// VAO object to link our screen filling quad with our textured quad shader
 	GLuint vao;

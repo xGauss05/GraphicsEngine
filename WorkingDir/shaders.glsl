@@ -93,6 +93,7 @@ uniform sampler2D uAO;
 uniform sampler2D uEmissive;
 uniform sampler2D uSpecular;
 uniform sampler2D uRoughness;
+uniform sampler2D uDepth;
 
 layout(binding = 0, std140) uniform GlobalParams 
 {
@@ -107,6 +108,16 @@ layout(location = 1) out vec4 rt1; // Specular, Roughness
 layout(location = 2) out vec4 rt2; // Normals
 layout(location = 3) out vec4 rt3; // Emissive + Lightmaps
 layout(location = 4) out vec4 rt4; // Position
+layout(location = 5) out vec4 rt5; // Depth
+
+float near = 0.1f;
+float far = 100.0f;
+
+float linearizeDepth(float depth)
+{
+	float z = depth * 2.0 - 1.0;
+	return (2.0 * near * far) / (far + near - z * (far - near));
+}
 
 void main()
 {
@@ -142,9 +153,11 @@ void main()
     //oColor = vec4(textureColor * resultColor, 1.0);
 
 	rt0 = vec4(textureColor * resultColor, 1.0); // Albedo, Ambient Occlusion
-	rt2 = vec4(normalize(vNormal), 1.0); 		 // Normals
-	rt4 = vec4(vPosition, 1.0);		 // Position
-
+	rt2 = vec4(normal, 1.0); 		 			 // Normals
+	rt4 = vec4(vPosition, 1.0);		 			 // Position
+	
+	float depth = linearizeDepth(texture(uTexture, vTexCoord).r) / far; 
+	rt5 = vec4(vec3(depth), 1.0); 		 			 // Depth
 	
 }
 

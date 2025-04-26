@@ -427,6 +427,245 @@ void ProcessAssimpNode(const aiScene* scene, aiNode* node, Mesh* myMesh, u32 bas
 	}
 }
 
+u32 CreateSphereModel(App* app, float radius, u32 xSegments, u32 ySegments)
+{
+	Mesh mesh = {};
+
+	Submesh submesh = {};
+	submesh.vbLayout.vbAttributes.push_back({ 0, 3, 0 }); // Position
+	submesh.vbLayout.vbAttributes.push_back({ 1, 3, 3 * sizeof(float) }); // Normal
+	submesh.vbLayout.vbAttributes.push_back({ 2, 2, 6 * sizeof(float) }); // TexCoord
+	submesh.vbLayout.stride = 8 * sizeof(float);
+
+	for (u32 y = 0; y <= ySegments; ++y)
+	{
+		for (u32 x = 0; x <= xSegments; ++x)
+		{
+			float xSegment = (float)x / (float)xSegments;
+			float ySegment = (float)y / (float)ySegments;
+			float xPos = radius * cos(xSegment * 2.0f * glm::pi<float>()) * sin(ySegment * glm::pi<float>());
+			float yPos = radius * cos(ySegment * glm::pi<float>());
+			float zPos = radius * sin(xSegment * 2.0f * glm::pi<float>()) * sin(ySegment * glm::pi<float>());
+
+			// Position
+			submesh.vertices.push_back(xPos);
+			submesh.vertices.push_back(yPos);
+			submesh.vertices.push_back(zPos);
+
+			// Normal
+			glm::vec3 normal = glm::normalize(glm::vec3(xPos, yPos, zPos));
+			submesh.vertices.push_back(normal.x);
+			submesh.vertices.push_back(normal.y);
+			submesh.vertices.push_back(normal.z);
+
+			// TexCoord
+			submesh.vertices.push_back(xSegment);
+			submesh.vertices.push_back(ySegment);
+		}
+	}
+
+	bool oddRow = false;
+	for (u32 y = 0; y < ySegments; ++y)
+	{
+		for (u32 x = 0; x < xSegments; ++x)
+		{
+			u32 i0 = y * (xSegments + 1) + x;
+			u32 i1 = i0 + 1;
+			u32 i2 = (y + 1) * (xSegments + 1) + x;
+			u32 i3 = i2 + 1;
+
+			submesh.indices.push_back(i0);
+			submesh.indices.push_back(i2);
+			submesh.indices.push_back(i1);
+
+			submesh.indices.push_back(i1);
+			submesh.indices.push_back(i2);
+			submesh.indices.push_back(i3);
+		}
+	}
+
+	mesh.submeshes.push_back(submesh);
+
+	// Now upload to OpenGL
+
+	u32 vertexBufferSize = 0;
+	u32 indexBufferSize = 0;
+
+	for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+	{
+		vertexBufferSize += mesh.submeshes[i].vertices.size() * sizeof(float);
+		indexBufferSize += mesh.submeshes[i].indices.size() * sizeof(u32);
+	}
+
+	glGenBuffers(1, &mesh.vertexBufferHandle);
+	glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
+	glBufferData(GL_ARRAY_BUFFER, vertexBufferSize, NULL, GL_STATIC_DRAW);
+
+	glGenBuffers(1, &mesh.indexBufferHandle);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize, NULL, GL_STATIC_DRAW);
+
+	u32 indicesOffset = 0;
+	u32 verticesOffset = 0;
+
+	for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+	{
+		const void* verticesData = mesh.submeshes[i].vertices.data();
+		const u32   verticesSize = mesh.submeshes[i].vertices.size() * sizeof(float);
+		glBufferSubData(GL_ARRAY_BUFFER, verticesOffset, verticesSize, verticesData);
+		mesh.submeshes[i].vertexOffset = verticesOffset;
+		verticesOffset += verticesSize;
+
+		const void* indicesData = mesh.submeshes[i].indices.data();
+		const u32   indicesSize = mesh.submeshes[i].indices.size() * sizeof(u32);
+		glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, indicesOffset, indicesSize, indicesData);
+		mesh.submeshes[i].indexOffset = indicesOffset;
+		indicesOffset += indicesSize;
+	}
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	// Add the mesh
+	app->meshes.push_back(mesh);
+	u32 meshIdx = (u32)app->meshes.size() - 1u;
+
+	// Add a dummy material
+	Material material = {};
+	material.albedo = vec3(1.0f, 0.5f, 0.31f);
+	material.smoothness = 0.5f;
+	app->materials.push_back(material);
+	u32 materialIdx = (u32)app->materials.size() - 1u;
+
+	// Add the model
+	Model model = {};
+	model.meshIdx = meshIdx;
+	model.materialIdx.push_back(materialIdx);
+	app->models.push_back(model);
+	u32 modelIdx = (u32)app->models.size() - 1u;
+
+	return modelIdx;
+}
+
+u32 CreatePlaneModel(App* app, float size, u32 xSegments, u32 ySegments)
+{
+	Mesh mesh = {};
+
+	Submesh submesh = {};
+	submesh.vbLayout.vbAttributes.push_back({ 0, 3, 0 }); // Position
+	submesh.vbLayout.vbAttributes.push_back({ 1, 3, 3 * sizeof(float) }); // Normal
+	submesh.vbLayout.vbAttributes.push_back({ 2, 2, 6 * sizeof(float) }); // TexCoord
+	submesh.vbLayout.stride = 8 * sizeof(float);
+
+	float halfSize = size * 0.5f;
+
+	for (u32 y = 0; y <= ySegments; ++y)
+	{
+		for (u32 x = 0; x <= xSegments; ++x)
+		{
+			float xSegment = (float)x / (float)xSegments;
+			float ySegment = (float)y / (float)ySegments;
+			float xPos = -halfSize + xSegment * size;
+			float yPos = 0.0f;
+			float zPos = -halfSize + ySegment * size;
+
+			// Position
+			submesh.vertices.push_back(xPos);
+			submesh.vertices.push_back(yPos);
+			submesh.vertices.push_back(zPos);
+
+			// Normal (facing up)
+			submesh.vertices.push_back(0.0f);
+			submesh.vertices.push_back(1.0f);
+			submesh.vertices.push_back(0.0f);
+
+			// TexCoord
+			submesh.vertices.push_back(xSegment);
+			submesh.vertices.push_back(ySegment);
+		}
+	}
+
+	for (u32 y = 0; y < ySegments; ++y)
+	{
+		for (u32 x = 0; x < xSegments; ++x)
+		{
+			u32 i0 = y * (xSegments + 1) + x;
+			u32 i1 = i0 + 1;
+			u32 i2 = (y + 1) * (xSegments + 1) + x;
+			u32 i3 = i2 + 1;
+
+			submesh.indices.push_back(i0);
+			submesh.indices.push_back(i2);
+			submesh.indices.push_back(i1);
+
+			submesh.indices.push_back(i1);
+			submesh.indices.push_back(i2);
+			submesh.indices.push_back(i3);
+		}
+	}
+
+	mesh.submeshes.push_back(submesh);
+
+	// Upload to GPU
+	u32 vertexBufferSize = 0;
+	u32 indexBufferSize = 0;
+
+	for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+	{
+		vertexBufferSize += mesh.submeshes[i].vertices.size() * sizeof(float);
+		indexBufferSize += mesh.submeshes[i].indices.size() * sizeof(u32);
+	}
+
+	glGenBuffers(1, &mesh.vertexBufferHandle);
+	glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
+	glBufferData(GL_ARRAY_BUFFER, vertexBufferSize, NULL, GL_STATIC_DRAW);
+
+	glGenBuffers(1, &mesh.indexBufferHandle);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize, NULL, GL_STATIC_DRAW);
+
+	u32 indicesOffset = 0;
+	u32 verticesOffset = 0;
+
+	for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+	{
+		const void* verticesData = mesh.submeshes[i].vertices.data();
+		const u32   verticesSize = mesh.submeshes[i].vertices.size() * sizeof(float);
+		glBufferSubData(GL_ARRAY_BUFFER, verticesOffset, verticesSize, verticesData);
+		mesh.submeshes[i].vertexOffset = verticesOffset;
+		verticesOffset += verticesSize;
+
+		const void* indicesData = mesh.submeshes[i].indices.data();
+		const u32   indicesSize = mesh.submeshes[i].indices.size() * sizeof(u32);
+		glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, indicesOffset, indicesSize, indicesData);
+		mesh.submeshes[i].indexOffset = indicesOffset;
+		indicesOffset += indicesSize;
+	}
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	// Add the mesh
+	app->meshes.push_back(mesh);
+	u32 meshIdx = (u32)app->meshes.size() - 1u;
+
+	// Add a dummy material
+	Material material = {};
+	material.albedo = vec3(0.8f, 0.8f, 0.8f); // Light gray
+	material.smoothness = 0.5f;
+	app->materials.push_back(material);
+	u32 materialIdx = (u32)app->materials.size() - 1u;
+
+	// Add the model
+	Model model = {};
+	model.meshIdx = meshIdx;
+	model.materialIdx.push_back(materialIdx);
+	app->models.push_back(model);
+	u32 modelIdx = (u32)app->models.size() - 1u;
+
+	return modelIdx;
+}
+
 u32 LoadModel(App* app, const char* filename)
 {
 	const aiScene* scene = aiImportFile(filename,
@@ -663,6 +902,8 @@ void InitQuadMode(App* app)
 void InitMeshMode(App* app)
 {
 	app->patrickModel = LoadModel(app, "Patrick/Patrick.obj");
+	app->sphere = CreateSphereModel(app, 1.0f, 64, 64);
+	app->plane = CreatePlaneModel(app, 10.0f, 10, 10);
 
 	// - programs
 	app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_TEXTURED_MESH");
@@ -674,19 +915,35 @@ void InitMeshMode(App* app)
 	app->texturedMeshProgram_uEmissive = glGetUniformLocation(texturedMeshProgram.handle, "uEmissive");
 	app->texturedMeshProgram_uSpecular = glGetUniformLocation(texturedMeshProgram.handle, "uSpecular");
 	app->texturedMeshProgram_uRoughness = glGetUniformLocation(texturedMeshProgram.handle, "uRoughness");
+	app->texturedMeshProgram_uDepth = glGetUniformLocation(texturedMeshProgram.handle, "uDepth");
 
+	vec3 sphereSize = vec3{ 0.15f };
+	vec3 planeSize = vec3{ 1.5f };
 
-	Entity en1 = { TransformPositionScale(vec3(2.0f, 1.5f, -2.0f),  vec3(0.45f)), app->patrickModel };
-	Entity en2 = { TransformPositionScale(vec3(-2.0f, 1.5f, -2.0f), vec3(0.45f)), app->patrickModel };
-	Entity en3 = { TransformPositionScale(vec3(0.0f, 1.5f, -2.0f),  vec3(0.45f)), app->patrickModel };
+	// Right
+	Entity en1 = { TransformPositionScale(vec3(4.0f, 1.5f, -5.0f),  vec3(0.45f)), app->patrickModel };
+	Entity sphere1 = { TransformPositionScale(vec3(4.0f, 0.5f, -2.0f),  sphereSize), app->sphere };
+	Light li1 = { LightType_Point, Colors::White, vec3(1.0), vec3(2.0f, 1.5f, -5.0f) };
+
+	// Left
+	Entity en2 = { TransformPositionScale(vec3(-2.0f, 1.5f, -5.0f), vec3(0.45f)), app->patrickModel };
+	Entity sphere2 = { TransformPositionScale(vec3(-5.0f, 1.5f, -6.0f), sphereSize), app->sphere };
+	Light li2 = { LightType_Point, Colors::White, vec3(1.0), vec3(-2.0f, 1.5f, -5.0f) };
+
+	// Middle
+	Entity en3 = { TransformPositionScale(vec3(0.0f, 1.5f, -5.0f),  vec3(0.45f)), app->patrickModel };
+	Entity sphere3 = { TransformPositionScale(vec3(0.0f, 1.5f, 1.0f),  sphereSize), app->sphere };
+	Light li3 = { LightType_Point, Colors::White, vec3(1.0), vec3(0.0f, 1.5f, 1.0f) };
+
+	Entity plane = { TransformPositionScale(vec3(0.0f, 0.0f, 0.0f),  planeSize), app->plane };
 
 	app->entities.push_back(en1);
 	app->entities.push_back(en2);
 	app->entities.push_back(en3);
-
-	Light li1 = { LightType_Directional, Colors::Yellow, vec3(1.0), vec3(1.0) };
-	Light li2 = { LightType_Point, Colors::Magenta, vec3(1.0), vec3(1.0) };
-	Light li3 = { LightType_Directional, Colors::Cyan, vec3(1.0), vec3(1.0) };
+	app->entities.push_back(sphere1);
+	app->entities.push_back(sphere2);
+	app->entities.push_back(sphere3);
+	app->entities.push_back(plane);
 
 	app->lights.push_back(li1);
 	app->lights.push_back(li2);
@@ -787,11 +1044,11 @@ void InitFramebuffer(App* app)
 	//glDrawBuffers(1, &app->albedoAO_attachmentHandle);
 
 	GLenum drawBuffers[] = {
-GL_COLOR_ATTACHMENT0,
-GL_COLOR_ATTACHMENT1,
-GL_COLOR_ATTACHMENT2,
-GL_COLOR_ATTACHMENT3,
-GL_COLOR_ATTACHMENT4,
+		GL_COLOR_ATTACHMENT0,
+		GL_COLOR_ATTACHMENT1,
+		GL_COLOR_ATTACHMENT2,
+		GL_COLOR_ATTACHMENT3,
+		GL_COLOR_ATTACHMENT4,
 	};
 
 	glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
@@ -815,11 +1072,11 @@ void Init(App* app)
 
 	// Camera init
 	app->camera = {};
-	app->camera.position = glm::vec3(0.0f, 0.0f, 3.0f);
+	app->camera.position = glm::vec3(0.0f, 0.5f, 3.0f);
 	app->camera.target = glm::vec3(0.0f);
 	app->camera.direction = glm::normalize(app->camera.position - app->camera.target);
 	app->camera.znear = 0.1f;
-	app->camera.zfar = 1000.0f;
+	app->camera.zfar = 100.0f;
 	app->camera.fov = 60.0f;
 
 	CameraMovement(app);
@@ -893,6 +1150,11 @@ void RenderModeWindow(App* app)
 	if (ImGui::Button("Position"))
 	{
 		ChangeAppMode(app, Mode_Position);
+	}
+
+	if (ImGui::Button("Depth"))
+	{
+		ChangeAppMode(app, Mode_Depth);
 	}
 
 	ImGui::End();
@@ -1198,16 +1460,30 @@ void RenderPositionMode(App* app)
 
 void RenderDepthMode(App* app)
 {
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
 
-	glUseProgram(app->programs[app->texturedGeometryProgramIdx].handle); // Asumiendo que tienes un shader para visualizar depth
+	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
+
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+	RenderMeshMode(app);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
+	glUseProgram(programTexturedGeometry.handle); // bind shader
 	glBindVertexArray(app->vao);
+	
+	glDisable(GL_DEPTH_TEST);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glUniform1i(app->programUniformTexture, 0);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, app->depthAttachmentHandle);
-
-	glUniform1i(app->programUniformTexture, 0);
 
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 }
@@ -1251,4 +1527,3 @@ void Render(App* app)
 	glBindVertexArray(0);
 	glUseProgram(0);
 }
-
