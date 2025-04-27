@@ -51,6 +51,7 @@ enum Mode
 	Mode_Normal,
 	Mode_Position,
 	Mode_Depth,
+	Mode_Lighting
 };
 
 struct VertexV3V2
@@ -260,6 +261,7 @@ struct App
 	GLuint normals_attachmentHandle;
 	GLuint emissiveLightmaps_attachmentHandle;
 	GLuint position_attachmentHandle;
+	GLuint depthViz_attachmentHandle;
 	GLuint depthAttachmentHandle;
 	GLuint framebufferHandle;
 

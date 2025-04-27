@@ -154,10 +154,11 @@ void main()
 
 	rt0 = vec4(textureColor * resultColor, 1.0); // Albedo, Ambient Occlusion
 	rt2 = vec4(normal, 1.0); 		 			 // Normals
+	rt3 = vec4(resultColor, 1.0);				 // Lighting
 	rt4 = vec4(vPosition, 1.0);		 			 // Position
 	
-	float depth = linearizeDepth(texture(uTexture, vTexCoord).r) / far; 
-	rt5 = vec4(vec3(depth), 1.0); 		 			 // Depth
+    float linearDepth = linearizeDepth(gl_FragCoord.z) / far; 
+	rt5 = vec4(vec3(linearDepth), 1.0); 		 // Depth
 	
 }
 

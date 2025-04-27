@@ -827,7 +827,7 @@ void ChangeAppMode(App* app, Mode mode)
 // Camera functions
 void CameraMovement(App* app)
 {
-	const float moveSpeed = 5.0f;       
+	const float moveSpeed = 5.0f;
 	const float rotSpeed = 0.003f;
 
 	vec3 camForward = glm::normalize(app->camera.target - app->camera.position);
@@ -845,15 +845,17 @@ void CameraMovement(App* app)
 		direction = vec3(pitch * vec4(direction, 0.0f));
 
 		app->camera.target = app->camera.position + glm::normalize(direction);
+
+		// Keyboard movement (WASD)
+		if (app->input.keys[K_W]) app->camera.position += camForward * moveSpeed * app->deltaTime;
+		if (app->input.keys[K_S]) app->camera.position -= camForward * moveSpeed * app->deltaTime;
+		if (app->input.keys[K_D]) app->camera.position -= camRight * moveSpeed * app->deltaTime;
+		if (app->input.keys[K_A]) app->camera.position += camRight * moveSpeed * app->deltaTime;
+
+		app->camera.direction = glm::normalize(app->camera.position - app->camera.target);
 	}
 
-	// Keyboard movement (WASD)
-	if (app->input.keys[K_W]) app->camera.position += camForward * moveSpeed * app->deltaTime;
-	if (app->input.keys[K_S]) app->camera.position -= camForward * moveSpeed * app->deltaTime;
-	if (app->input.keys[K_D]) app->camera.position -= camRight * moveSpeed * app->deltaTime;
-	if (app->input.keys[K_A]) app->camera.position += camRight * moveSpeed * app->deltaTime;
 
-	app->camera.direction = glm::normalize(app->camera.position - app->camera.target);
 }
 
 // Init functions
@@ -1026,6 +1028,16 @@ void InitFramebuffer(App* app)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+	glGenTextures(1, &app->depthViz_attachmentHandle);
+	glBindTexture(GL_TEXTURE_2D, app->depthViz_attachmentHandle);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
 	glGenFramebuffers(1, &app->framebufferHandle);
 	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
 
@@ -1034,6 +1046,7 @@ void InitFramebuffer(App* app)
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, app->normals_attachmentHandle, 0);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, app->emissiveLightmaps_attachmentHandle, 0);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, app->position_attachmentHandle, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, app->depthViz_attachmentHandle, 0);
 
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, app->depthAttachmentHandle, 0);
 
@@ -1062,6 +1075,7 @@ void InitFramebuffer(App* app)
 		GL_COLOR_ATTACHMENT2,
 		GL_COLOR_ATTACHMENT3,
 		GL_COLOR_ATTACHMENT4,
+		GL_COLOR_ATTACHMENT5,
 	};
 
 	glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
@@ -1170,6 +1184,11 @@ void RenderModeWindow(App* app)
 		ChangeAppMode(app, Mode_Depth);
 	}
 
+	if (ImGui::Button("Lighting"))
+	{
+		ChangeAppMode(app, Mode_Lighting);
+	}
+
 	ImGui::End();
 }
 
@@ -1204,11 +1223,6 @@ void Update(App* app)
 {
 	// You can handle app->input keyboard/mouse here
 	if (app->input.keys[K_ESCAPE]) app->isRunning = false;
-	if (app->input.keys[K_1]) ChangeAppMode(app, Mode_TexturedQuad);
-	if (app->input.keys[K_2]) ChangeAppMode(app, Mode_Mesh);
-	if (app->input.keys[K_3]) ChangeAppMode(app, Mode_Framebuffer);
-	if (app->input.keys[K_4]) ChangeAppMode(app, Mode_Normal);
-	if (app->input.keys[K_5]) ChangeAppMode(app, Mode_Depth);
 
 	HotReload(app);
 
@@ -1489,14 +1503,46 @@ void RenderDepthMode(App* app)
 	Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
 	glUseProgram(programTexturedGeometry.handle); // bind shader
 	glBindVertexArray(app->vao);
-	
+
 	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glUniform1i(app->programUniformTexture, 0);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, app->depthAttachmentHandle);
+	glBindTexture(GL_TEXTURE_2D, app->depthViz_attachmentHandle);
+
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+}
+
+void RenderLightingMode(App* app) 
+{
+	glEnable(GL_DEPTH_TEST);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
+
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+	RenderMeshMode(app);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
+	glUseProgram(programTexturedGeometry.handle); // bind shader
+	glBindVertexArray(app->vao);
+
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glUniform1i(app->programUniformTexture, 0);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, app->emissiveLightmaps_attachmentHandle);
 
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 }
@@ -1531,6 +1577,10 @@ void Render(App* app)
 
 	case Mode_Depth:
 		RenderDepthMode(app);
+		break;
+
+	case Mode_Lighting:
+		RenderLightingMode(app);
 		break;
 
 	default:
