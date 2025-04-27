@@ -827,20 +827,33 @@ void ChangeAppMode(App* app, Mode mode)
 // Camera functions
 void CameraMovement(App* app)
 {
-	float camSpeed = 0.8f;
+	const float moveSpeed = 5.0f;       
+	const float rotSpeed = 0.003f;
 
-	// Position
-	if (app->input.keys[K_W]) { app->camera.position.y += app->deltaTime * camSpeed; }
-	if (app->input.keys[K_A]) { app->camera.position.x -= app->deltaTime * camSpeed; }
-	if (app->input.keys[K_S]) { app->camera.position.y -= app->deltaTime * camSpeed; }
-	if (app->input.keys[K_D]) { app->camera.position.x += app->deltaTime * camSpeed; }
+	vec3 camForward = glm::normalize(app->camera.target - app->camera.position);
+	vec3 camRight = glm::normalize(glm::cross(camForward, vec3(0.0f, 1.0f, 0.0f)));
+	vec3 camUp = glm::cross(camRight, camForward);
 
-	// Target
-	if (app->input.keys[K_I]) { app->camera.target.y += app->deltaTime * camSpeed; }
-	if (app->input.keys[K_J]) { app->camera.target.x -= app->deltaTime * camSpeed; }
-	if (app->input.keys[K_K]) { app->camera.target.y -= app->deltaTime * camSpeed; }
-	if (app->input.keys[K_L]) { app->camera.target.x += app->deltaTime * camSpeed; }
+	// Mouse rotation
+	if (app->input.mouseButtons[MouseButton::RIGHT] == BUTTON_PRESSED || app->input.mouseButtons[MouseButton::RIGHT] == BUTTON_PRESS)
+	{
+		glm::mat4 yaw = glm::rotate(-app->input.mouseDelta.x * rotSpeed, vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 pitch = glm::rotate(-app->input.mouseDelta.y * rotSpeed, camRight);
 
+		vec3 direction = camForward;
+		direction = vec3(yaw * vec4(direction, 0.0f));
+		direction = vec3(pitch * vec4(direction, 0.0f));
+
+		app->camera.target = app->camera.position + glm::normalize(direction);
+	}
+
+	// Keyboard movement (WASD)
+	if (app->input.keys[K_W]) app->camera.position += camForward * moveSpeed * app->deltaTime;
+	if (app->input.keys[K_S]) app->camera.position -= camForward * moveSpeed * app->deltaTime;
+	if (app->input.keys[K_D]) app->camera.position -= camRight * moveSpeed * app->deltaTime;
+	if (app->input.keys[K_A]) app->camera.position += camRight * moveSpeed * app->deltaTime;
+
+	app->camera.direction = glm::normalize(app->camera.position - app->camera.target);
 }
 
 // Init functions
@@ -1257,7 +1270,7 @@ void RenderQuadMode(App* app)
 
 	glUniform1i(app->programUniformTexture, 0);
 	glActiveTexture(GL_TEXTURE0);
-	GLuint textureHandle = app->textures[app->diceTexIdx].handle;
+	GLuint textureHandle = app->textures[app->whiteTexIdx].handle;
 	glBindTexture(GL_TEXTURE_2D, textureHandle);
 
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
