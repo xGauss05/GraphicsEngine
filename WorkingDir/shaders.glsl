@@ -210,21 +210,12 @@ uniform sampler2D uNormal;
 uniform sampler2D uAlbedo;
 uniform sampler2D uEmissive;
 
-// Ejemplo simple de una luz
-vec3 CalculateLighting(vec3 fragPos, vec3 normal, vec3 albedo)
+layout(binding = 0, std140) uniform GlobalParams 
 {
-    vec3 lightPos = vec3(10.0, 10.0, 10.0);
-    vec3 lightColor = vec3(1.0, 1.0, 1.0);
-
-    vec3 lightDir = normalize(lightPos - fragPos);
-    float diff = max(dot(normal, lightDir), 0.0);
-
-    vec3 diffuse = diff * lightColor;
-
-    vec3 ambient = vec3(0.1) * albedo;
-
-    return (ambient + diffuse) * albedo;
-}
+	vec3 uCameraPosition;
+	unsigned int uLightCount;
+	Light uLight[16];
+};
 
 void main()
 {
@@ -233,12 +224,40 @@ void main()
     vec3 albedo = texture(uAlbedo, vTexCoord).rgb;
     vec3 emissive = texture(uEmissive, vTexCoord).rgb;
 
-    vec3 lighting = CalculateLighting(fragPos, normal, albedo);
+    vec3 lighting = vec3(0.0);
 
-    vec3 finalColor = lighting + emissive;
+    for (uint i = 0u; i < uLightCount; ++i)
+    {
+        Light light = uLight[i];
+
+         if (light.type == 0) // Directional light
+        {
+            vec3 lightDir = normalize(-light.direction);
+            float diff = max(dot(normal, lightDir), 0.0);
+
+            vec3 diffuse = diff * light.color;
+            lighting += diffuse;
+        }
+        else if (light.type == 1) // Point light
+        {
+            vec3 lightDir = normalize(light.position - fragPos);
+            float distance = length(light.position - fragPos);
+            float attenuation = 1.0 / (distance * distance);
+
+            float diff = max(dot(normal, lightDir), 0.0);
+
+            vec3 diffuse = diff * light.color * attenuation;
+            lighting += diffuse;
+        }
+    }
+
+    vec3 ambient = vec3(0.1) * albedo; // ambient simple
+
+    vec3 finalColor = ambient + lighting * albedo + emissive;
 
     FragColor = vec4(finalColor, 1.0);
 }
+
 
 #endif
 #endif
