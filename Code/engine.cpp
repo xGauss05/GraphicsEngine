@@ -1120,6 +1120,16 @@ void InitFramebuffer(App* app)
 	glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+	app->deferredProgramIdx = LoadProgram(app, "shaders.glsl", "DEFERRED");
+	Program& deferredProgram = app->programs[app->deferredProgramIdx];
+
+	app->deferredProgram_uTexture = glGetUniformLocation(deferredProgram.handle, "uTexture");
+	app->deferredProgram_uNormal = glGetUniformLocation(deferredProgram.handle, "uNormal");
+	app->deferredProgram_uAlbedo = glGetUniformLocation(deferredProgram.handle, "uAlbedo");
+	app->deferredProgram_uEmissive = glGetUniformLocation(deferredProgram.handle, "uEmissive");
+
 }
 
 void Init(App* app)
@@ -1569,6 +1579,7 @@ void RenderDeferredMode(App* app)
 {
 	glEnable(GL_DEPTH_TEST);
 
+	// Geometry pass
 	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
 
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -1580,29 +1591,35 @@ void RenderDeferredMode(App* app)
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	Program& prog = app->programs[app->texturedMeshProgramIdx];
-	glUseProgram(prog.handle); //bind shader
+	// Lighting pass
+	Program& deferredProgram = app->programs[app->deferredProgramIdx]; // Usa tu shader DEFERRED
+	glUseProgram(deferredProgram.handle);
 	glBindVertexArray(app->vao);
 
 	glDisable(GL_DEPTH_TEST);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_BLEND);
 
-	// Position
-	glUniform1i(app->texturedMeshProgram_uPosition, 2);
+	glUniform1i(glGetUniformLocation(deferredProgram.handle, "uPosition"), 0);
+	glUniform1i(glGetUniformLocation(deferredProgram.handle, "uNormal"), 1);
+	glUniform1i(glGetUniformLocation(deferredProgram.handle, "uAlbedo"), 2);
+	glUniform1i(glGetUniformLocation(deferredProgram.handle, "uEmissive"), 3);
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, app->position_attachmentHandle);
 
-	// Albedo, Diffuse
-	glUniform1i(app->texturedMeshProgram_uTexture, 0);
 	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, app->normals_attachmentHandle);
+
+	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, app->albedoAO_attachmentHandle);
 
-	// Normals
-	glUniform1i(app->texturedMeshProgram_uNormal, 1);
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, app->normals_attachmentHandle);
-	
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, app->emissiveLightmaps_attachmentHandle);
+
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+
+	glBindVertexArray(0);
+	glUseProgram(0);
 
 }
 
