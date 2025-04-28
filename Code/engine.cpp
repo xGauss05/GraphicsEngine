@@ -933,43 +933,88 @@ void InitMeshMode(App* app)
 	app->texturedMeshProgram_uDepth = glGetUniformLocation(texturedMeshProgram.handle, "uDepth");
 
 	vec3 sphereSize = vec3{ 0.15f };
-	vec3 planeSize = vec3{ 1.5f };
+	vec3 planeSize = vec3{ 5.0f };
 
-	// Right
-	Entity en1 = { TransformPositionScale(vec3(4.0f, 1.5f, -5.0f),  vec3(0.45f)), app->patrickModel };
-	Entity sphere1 = { TransformPositionScale(vec3(4.0f, 0.5f, -2.0f),  sphereSize), app->sphere };
-	Light li1 = { LightType_Point, Colors::White, vec3(1.0), vec3(2.0f, 1.5f, -5.0f) };
+	// Pattricks
+	Entity en1 = { TransformPositionScale(vec3(-12.3f, 1.55f,  17.8f), vec3(0.45f)), app->patrickModel };
+	Entity en2 = { TransformPositionScale(vec3(8.5f, 1.55f,  -5.6f), vec3(0.45f)), app->patrickModel };
+	Entity en3 = { TransformPositionScale(vec3(-18.9f, 1.55f,  13.2f), vec3(0.45f)), app->patrickModel };
+	Entity en4 = { TransformPositionScale(vec3(15.4f, 1.55f, -19.7f), vec3(0.45f)), app->patrickModel };
+	Entity en5 = { TransformPositionScale(vec3(-7.1f, 1.55f,  -2.5f), vec3(0.45f)), app->patrickModel };
+	Entity en6 = { TransformPositionScale(vec3(19.0f, 1.55f,  10.4f), vec3(0.45f)), app->patrickModel };
+	Entity en7 = { TransformPositionScale(vec3(4.6f, 1.55f, -17.3f), vec3(0.45f)), app->patrickModel };
+	Entity en8 = { TransformPositionScale(vec3(-15.2f, 1.55f,   3.7f), vec3(0.45f)), app->patrickModel };
+	Entity en9 = { TransformPositionScale(vec3(2.8f, 1.55f,  19.9f), vec3(0.45f)), app->patrickModel };
+	Entity en10 = { TransformPositionScale(vec3(-19.5f, 1.55f,  -8.1f), vec3(0.45f)), app->patrickModel };
+	Entity en11 = { TransformPositionScale(vec3(13.7f, 1.55f,   0.2f), vec3(0.45f)), app->patrickModel };
+	Entity en12 = { TransformPositionScale(vec3(-3.3f, 1.55f, -12.8f), vec3(0.45f)), app->patrickModel };
 
-	// Left
-	Entity en2 = { TransformPositionScale(vec3(-2.0f, 1.5f, -5.0f), vec3(0.45f)), app->patrickModel };
-	Entity sphere2 = { TransformPositionScale(vec3(-5.0f, 1.5f, -6.0f), sphereSize), app->sphere };
-	Light li2 = { LightType_Point, Colors::White, vec3(1.0), vec3(-2.0f, 1.5f, -5.0f) };
+	// Spheres (point lights)
+	Entity sphere1 = { TransformPositionScale(vec3(12.6f, 0.5f,  -8.9f), sphereSize), app->sphere };
+	Entity sphere2 = { TransformPositionScale(vec3(-15.2f, 1.5f,  13.4f), sphereSize), app->sphere };
+	Entity sphere3 = { TransformPositionScale(vec3(7.3f, 1.5f,  -2.1f), sphereSize), app->sphere };
+	Entity sphere4 = { TransformPositionScale(vec3(-3.7f, 1.5f,  17.8f), sphereSize), app->sphere };
+	Entity sphere5 = { TransformPositionScale(vec3(19.0f, 1.5f,  -5.6f), sphereSize), app->sphere };
+	Entity sphere6 = { TransformPositionScale(vec3(-9.4f, 1.5f, -17.3f), sphereSize), app->sphere };
+	Light li1 = { LightType_Point, Colors::White, vec3(1.0), vec3(12.6f, 0.5f,  -8.9f) };
+	Light li2 = { LightType_Point, Colors::White, vec3(1.0), vec3(-15.2f, 1.5f,  13.4f) };
+	Light li3 = { LightType_Point, Colors::White, vec3(1.0), vec3(7.3f, 1.5f,  -2.1f) };
+	Light li4 = { LightType_Point, Colors::White, vec3(1.0), vec3(-3.7f, 1.5f,  17.8f) };
+	Light li5 = { LightType_Point, Colors::White, vec3(1.0), vec3(19.0f, 1.5f,  -5.6f) };
+	Light li6 = { LightType_Point, Colors::White, vec3(1.0), vec3(-9.4f, 1.5f, -17.3f) };
 
-	// Middle
-	Entity en3 = { TransformPositionScale(vec3(0.0f, 1.5f, -5.0f),  vec3(0.45f)), app->patrickModel };
-	Entity sphere3 = { TransformPositionScale(vec3(0.0f, 1.5f, 1.0f),  sphereSize), app->sphere };
-	Light li3 = { LightType_Point, Colors::White, vec3(1.0), vec3(0.0f, 1.5f, 1.0f) };
+	// Planes (directional lights)
+	Entity plane1 = { TransformPositionScale(vec3(0.0f, 3.0f, 0.0f),  sphereSize), app->plane };
+	Light li7 = { LightType_Point, Colors::White, vec3(1.0), vec3(0.0f, 3.0f, 0.0f) };
+	Entity plane2 = { TransformPositionScale(vec3(8.5f, 3.0f,  -5.6f),  sphereSize), app->plane };
+	Light li8 = { LightType_Point, Colors::White, vec3(1.0), vec3(8.5f, 3.0f,  -5.6f) };
 
+	// Scene plane
 	Entity plane = { TransformPositionScale(vec3(0.0f, 0.0f, 0.0f),  planeSize), app->plane };
+
+#pragma region Lights & Entities push
 
 	app->entities.push_back(en1);
 	app->entities.push_back(en2);
 	app->entities.push_back(en3);
+	app->entities.push_back(en4);
+	app->entities.push_back(en5);
+	app->entities.push_back(en6);
+	app->entities.push_back(en7);
+	app->entities.push_back(en8);
+	app->entities.push_back(en9);
+	app->entities.push_back(en10);
+	app->entities.push_back(en11);
+	app->entities.push_back(en12);
+
 	app->entities.push_back(sphere1);
 	app->entities.push_back(sphere2);
 	app->entities.push_back(sphere3);
-	app->entities.push_back(plane);
+	app->entities.push_back(sphere4);
+	app->entities.push_back(sphere5);
+	app->entities.push_back(sphere6);
 
 	app->lights.push_back(li1);
 	app->lights.push_back(li2);
 	app->lights.push_back(li3);
+	app->lights.push_back(li4);
+	app->lights.push_back(li5);
+	app->lights.push_back(li6);
+	app->lights.push_back(li7);
+	app->lights.push_back(li8);
+
+	app->entities.push_back(plane);
+	app->entities.push_back(plane1);
+	app->entities.push_back(plane2);
+
+#pragma endregion
 }
 
 void InitFramebuffer(App* app)
 {
 	// Framebuffer
-	glGenTextures(1, &app->albedoAO_attachmentHandle);
-	glBindTexture(GL_TEXTURE_2D, app->albedoAO_attachmentHandle);
+	glGenTextures(1, &app->scene_attachmentHandle);
+	glBindTexture(GL_TEXTURE_2D, app->scene_attachmentHandle);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -978,8 +1023,8 @@ void InitFramebuffer(App* app)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	glGenTextures(1, &app->specularRoughness_attachmentHandle);
-	glBindTexture(GL_TEXTURE_2D, app->specularRoughness_attachmentHandle);
+	glGenTextures(1, &app->albedoAO_attachmentHandle);
+	glBindTexture(GL_TEXTURE_2D, app->albedoAO_attachmentHandle);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -1041,8 +1086,8 @@ void InitFramebuffer(App* app)
 	glGenFramebuffers(1, &app->framebufferHandle);
 	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
 
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, app->albedoAO_attachmentHandle, 0);
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, app->specularRoughness_attachmentHandle, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, app->scene_attachmentHandle, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, app->albedoAO_attachmentHandle, 0);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, app->normals_attachmentHandle, 0);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, app->emissiveLightmaps_attachmentHandle, 0);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, app->position_attachmentHandle, 0);
@@ -1163,6 +1208,8 @@ void RenderModeWindow(App* app)
 	{
 		ChangeAppMode(app, Mode_Framebuffer);
 	}
+
+	ImGui::Separator();
 
 	if (ImGui::Button("Albedo"))
 	{
@@ -1361,13 +1408,13 @@ void RenderFramebufferMode(App* app)
 
 	glUniform1i(app->programUniformTexture, 0);
 
-	// Albedo & Ambient Occlusion
+	// Scene
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, app->albedoAO_attachmentHandle);
+	glBindTexture(GL_TEXTURE_2D, app->scene_attachmentHandle);
 
-	// Specular & Roughness
+	// Albedo
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, app->specularRoughness_attachmentHandle);
+	glBindTexture(GL_TEXTURE_2D, app->albedoAO_attachmentHandle);
 
 	// Normals
 	glActiveTexture(GL_TEXTURE2);
@@ -1411,18 +1458,6 @@ void RenderAlbedoMode(App* app)
 	// Albedo & Ambient Occlusion
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, app->albedoAO_attachmentHandle);
-
-	// Specular & Roughness
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, app->specularRoughness_attachmentHandle);
-
-	// Normals
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, app->normals_attachmentHandle);
-
-	// Emissive & Lightmaps
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, app->emissiveLightmaps_attachmentHandle);
 
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 }
@@ -1516,7 +1551,7 @@ void RenderDepthMode(App* app)
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 }
 
-void RenderLightingMode(App* app) 
+void RenderLightingMode(App* app)
 {
 	glEnable(GL_DEPTH_TEST);
 
@@ -1547,6 +1582,7 @@ void RenderLightingMode(App* app)
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 }
 
+// Render loop
 void Render(App* app)
 {
 	switch (app->mode)

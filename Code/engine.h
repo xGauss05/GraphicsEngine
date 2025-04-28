@@ -256,8 +256,8 @@ struct App
 	u32 globalParamsSize;
 
 	// framebuffers
+	GLuint scene_attachmentHandle;
 	GLuint albedoAO_attachmentHandle;
-	GLuint specularRoughness_attachmentHandle;
 	GLuint normals_attachmentHandle;
 	GLuint emissiveLightmaps_attachmentHandle;
 	GLuint position_attachmentHandle;

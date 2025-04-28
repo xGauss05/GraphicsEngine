@@ -103,8 +103,8 @@ layout(binding = 0, std140) uniform GlobalParams
 };
 
 //layout(location = 0) out vec4 oColor;
-layout(location = 0) out vec4 rt0; // Albedo, Ambient Occlusion
-layout(location = 1) out vec4 rt1; // Specular, Roughness
+layout(location = 0) out vec4 rt0; // Normal Scene
+layout(location = 1) out vec4 rt1; // Albedo, Specular
 layout(location = 2) out vec4 rt2; // Normals
 layout(location = 3) out vec4 rt3; // Emissive + Lightmaps
 layout(location = 4) out vec4 rt4; // Position
@@ -123,11 +123,13 @@ void main()
 {
 	vec3 normal = normalize(vNormal);
     vec3 viewDir = normalize(uCameraPosition - vPosition);
-    vec3 resultColor = vec3(0.0);
+    vec3 resultColor = texture(uTexture, vTexCoord).rgb * 0.1f; // Albedo * 0.1f
+	float intensity = 1.5;
 
     for (uint i = 0; i < uLightCount; i++) 
 	{
         Light light = uLight[i];
+		
         vec3 lightDir;
         if (light.type == 0) // Directional light
 		{ 
@@ -145,14 +147,27 @@ void main()
         vec3 reflectDir = reflect(-lightDir, normal);    
         vec3 specular = pow(max(dot(viewDir, reflectDir), 0.0), 32.0) * light.color;
 
-        resultColor += diffuse + specular;
+		// Attenuation
+		if (light.type == 1) 
+		{
+			float distance = length(light.position - vPosition);
+			float attenuation = 1.0 / (1.0 + 0.3 * distance + 0.5 * (distance * distance));   
+			resultColor += (diffuse + specular) * attenuation;
+		}
+		else {
+			resultColor += diffuse + specular;
+		}
+
+
+        
     }
 
     // Texture + light
     vec3 textureColor = texture(uTexture, vTexCoord).rgb;
     //oColor = vec4(textureColor * resultColor, 1.0);
 
-	rt0 = vec4(textureColor * resultColor, 1.0); // Albedo, Ambient Occlusion
+	rt0 = vec4(textureColor * resultColor, 1.0); // Normal scene
+	rt1 = vec4(textureColor, 1.0);				 // Albedo, Specular
 	rt2 = vec4(normal, 1.0); 		 			 // Normals
 	rt3 = vec4(resultColor, 1.0);				 // Lighting
 	rt4 = vec4(vPosition, 1.0);		 			 // Position
