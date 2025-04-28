@@ -854,8 +854,6 @@ void CameraMovement(App* app)
 
 		app->camera.direction = glm::normalize(app->camera.position - app->camera.target);
 	}
-
-
 }
 
 // Init functions
@@ -924,13 +922,9 @@ void InitMeshMode(App* app)
 	app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_TEXTURED_MESH");
 	Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
 
-	app->texturedMeshProgram_uTexture = glGetUniformLocation(texturedMeshProgram.handle, "uTexture");
-	app->texturedMeshProgram_uNormal = glGetUniformLocation(texturedMeshProgram.handle, "uNormal");
-	app->texturedMeshProgram_uAO = glGetUniformLocation(texturedMeshProgram.handle, "uAO");
-	app->texturedMeshProgram_uEmissive = glGetUniformLocation(texturedMeshProgram.handle, "uEmissive");
-	app->texturedMeshProgram_uSpecular = glGetUniformLocation(texturedMeshProgram.handle, "uSpecular");
-	app->texturedMeshProgram_uRoughness = glGetUniformLocation(texturedMeshProgram.handle, "uRoughness");
-	app->texturedMeshProgram_uDepth = glGetUniformLocation(texturedMeshProgram.handle, "uDepth");
+	app->texturedMeshProgram_uTexture = glGetUniformLocation(texturedMeshProgram.handle, "uTexture"); // 0
+	app->texturedMeshProgram_uNormal = glGetUniformLocation(texturedMeshProgram.handle, "uNormal"); // 1
+	app->texturedMeshProgram_uPosition = glGetUniformLocation(texturedMeshProgram.handle, "uPosition"); // 2
 
 	vec3 sphereSize = vec3{ 0.15f };
 	vec3 planeSize = vec3{ 5.0f };
@@ -1236,6 +1230,11 @@ void RenderModeWindow(App* app)
 		ChangeAppMode(app, Mode_Lighting);
 	}
 
+	if (ImGui::Button("Deferred"))
+	{
+		ChangeAppMode(app, Mode_Deferred);
+	}
+
 	ImGui::End();
 }
 
@@ -1384,11 +1383,9 @@ void RenderMeshMode(App* app)
 
 void RenderFramebufferMode(App* app)
 {
-
 	glEnable(GL_DEPTH_TEST);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
-
 
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1412,21 +1409,6 @@ void RenderFramebufferMode(App* app)
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, app->scene_attachmentHandle);
 
-	// Albedo
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, app->albedoAO_attachmentHandle);
-
-	// Normals
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, app->normals_attachmentHandle);
-
-	// Emissive & Lightmaps
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, app->emissiveLightmaps_attachmentHandle);
-
-	// Position
-	glActiveTexture(GL_TEXTURE4);
-	glBindTexture(GL_TEXTURE_2D, app->position_attachmentHandle);
 
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 }
@@ -1572,14 +1554,56 @@ void RenderLightingMode(App* app)
 
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
+	glBlendEquation(GL_FUNC_ADD);
+	glBlendFunc(GL_ONE, GL_ONE);
 	glUniform1i(app->programUniformTexture, 0);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, app->emissiveLightmaps_attachmentHandle);
+	glClear(GL_COLOR_BUFFER_BIT);
 
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+}
+
+void RenderDeferredMode(App* app)
+{
+	glEnable(GL_DEPTH_TEST);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
+
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+	RenderMeshMode(app);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	Program& prog = app->programs[app->texturedMeshProgramIdx];
+	glUseProgram(prog.handle); //bind shader
+	glBindVertexArray(app->vao);
+
+	glDisable(GL_DEPTH_TEST);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	// Position
+	glUniform1i(app->texturedMeshProgram_uPosition, 2);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, app->position_attachmentHandle);
+
+	// Albedo, Diffuse
+	glUniform1i(app->texturedMeshProgram_uTexture, 0);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, app->albedoAO_attachmentHandle);
+
+	// Normals
+	glUniform1i(app->texturedMeshProgram_uNormal, 1);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, app->normals_attachmentHandle);
+	
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+
 }
 
 // Render loop
@@ -1617,6 +1641,10 @@ void Render(App* app)
 
 	case Mode_Lighting:
 		RenderLightingMode(app);
+		break;
+
+	case Mode_Deferred:
+		RenderDeferredMode(app);
 		break;
 
 	default:

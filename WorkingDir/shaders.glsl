@@ -89,11 +89,7 @@ in vec3 vViewDir;  // In world space
 
 uniform sampler2D uTexture;
 uniform sampler2D uNormal;
-uniform sampler2D uAO;
-uniform sampler2D uEmissive;
-uniform sampler2D uSpecular;
-uniform sampler2D uRoughness;
-uniform sampler2D uDepth;
+uniform sampler2D uPosition;
 
 layout(binding = 0, std140) uniform GlobalParams 
 {
@@ -121,6 +117,12 @@ float linearizeDepth(float depth)
 
 void main()
 {
+
+	vec3 FragPos = texture(uPosition, vTexCoord).rgb;
+    vec3 Normal = texture(uNormal, vTexCoord).rgb;
+    vec3 Albedo = texture(uTexture, vTexCoord).rgb;
+    float Specular = texture(uTexture, vTexCoord).a;
+	
 	vec3 normal = normalize(vNormal);
     vec3 viewDir = normalize(uCameraPosition - vPosition);
     vec3 resultColor = texture(uTexture, vTexCoord).rgb * 0.1f; // Albedo * 0.1f

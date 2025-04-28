@@ -51,7 +51,8 @@ enum Mode
 	Mode_Normal,
 	Mode_Position,
 	Mode_Depth,
-	Mode_Lighting
+	Mode_Lighting,
+	Mode_Deferred
 };
 
 struct VertexV3V2
@@ -235,11 +236,7 @@ struct App
 	GLuint programUniformTexture;
 	GLuint texturedMeshProgram_uTexture;
 	GLuint texturedMeshProgram_uNormal;
-	GLuint texturedMeshProgram_uAO;
-	GLuint texturedMeshProgram_uEmissive;
-	GLuint texturedMeshProgram_uSpecular;
-	GLuint texturedMeshProgram_uRoughness;
-	GLuint texturedMeshProgram_uDepth;
+	GLuint texturedMeshProgram_uPosition;
 
 	// VAO object to link our screen filling quad with our textured quad shader
 	GLuint vao;
